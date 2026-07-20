@@ -1191,10 +1191,13 @@ return (function()
 		local w = math.max(atSize.X, 130)
 		local vs = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
 
-		-- Position to the RIGHT of the SelectBtn
-		local px = atPos.X + atSize.X + 4
-		local py = atPos.Y
-		if px + w > vs.X then px = atPos.X; py = atPos.Y + atSize.Y end
+		-- Position at Frame's RIGHT EDGE (flyout-style, like v0.3.1)
+		local frameAbs = self.Frame.AbsolutePosition
+		local frameSiz = self.Frame.AbsoluteSize
+		local topY = self.Theme.TopbarHeight + 4
+		local px = frameAbs.X + frameSiz.X - w
+		local py = frameAbs.Y + topY
+		if px < 4 then px = 4 end
 		if py + panelH > vs.Y then py = vs.Y - panelH - 4 end
 
 		-- Create popup Frame DIRECTLY in ScreenGui
@@ -1456,7 +1459,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.4.4", Theme = Theme }
+	local FyyUI = { Version = "0.4.5", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
