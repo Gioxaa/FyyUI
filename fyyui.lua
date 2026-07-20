@@ -186,7 +186,7 @@ return (function()
 		else
 			self:_animate(value)
 		end
-		spawn(function() self.Callback(value) end)
+		task.spawn(function() self.Callback(value) end)
 	end
 
 	function Toggle:GetValue() return self.Value end
@@ -440,7 +440,7 @@ return (function()
 			self._shadow.Position = UDim2.fromOffset(
 				self.Frame.Position.X.Offset - 8,
 				self.Frame.Position.Y.Offset - 8
-			end)
+			)
 		end
 
 		self:_dragging()
