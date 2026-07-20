@@ -38,9 +38,9 @@ return (function()
 			TabHover = Color3.fromRGB(45, 45, 54),
 			Font = Enum.Font.SourceSans,
 			FontBold = Enum.Font.SourceSansBold,
-			FontSize = 15,
+			FontSize = 16,
 			FontSizeTitle = 18,
-			FontSizeSmall = 13,
+			FontSizeSmall = 14,
 			Padding = 10,
 			CornerRadius = 8,
 			TopbarHeight = 44,
@@ -75,9 +75,9 @@ return (function()
 			TabHover = Color3.fromRGB(200, 200, 215),
 			Font = Enum.Font.SourceSans,
 			FontBold = Enum.Font.SourceSansBold,
-			FontSize = 15,
+			FontSize = 16,
 			FontSizeTitle = 18,
-			FontSizeSmall = 13,
+			FontSizeSmall = 14,
 			Padding = 10,
 			CornerRadius = 8,
 			TopbarHeight = 44,
@@ -123,15 +123,18 @@ return (function()
 
 		self.Container = U.Create("Frame", {
 			Name = "Toggle",
-			Size = UDim2.new(1, 0, 0, h),
-			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, h + 6),
+			BackgroundColor3 = theme.Element,
+			BackgroundTransparency = 0.4,
+			BorderSizePixel = 0,
 			Parent = parent,
 		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.Container })
 
 		self.Label = U.Create("TextLabel", {
 			Name = "Label",
-			Size = UDim2.new(1, -58, 0, 20),
-			Position = UDim2.fromOffset(0, self.HasDesc and 2 or (h - 20) / 2 + 1),
+			Size = UDim2.new(1, -68, 0, 20),
+			Position = UDim2.fromOffset(10, self.HasDesc and 6 or (h + 6 - 20) / 2 + 1),
 			BackgroundTransparency = 1,
 			Text = self.Text,
 			Font = theme.Font,
@@ -145,8 +148,8 @@ return (function()
 		if self.HasDesc then
 			U.Create("TextLabel", {
 				Name = "Description",
-				Size = UDim2.new(1, -58, 0, 16),
-				Position = UDim2.fromOffset(0, 24),
+				Size = UDim2.new(1, -68, 0, 16),
+				Position = UDim2.fromOffset(10, 28),
 				BackgroundTransparency = 1,
 				Text = self.Description,
 				Font = theme.Font,
@@ -161,7 +164,7 @@ return (function()
 		self.Track = U.Create("ImageButton", {
 			Name = "Track",
 			Size = UDim2.fromOffset(46, 24),
-			Position = UDim2.new(1, -52, 0.5, -12),
+			Position = UDim2.new(1, -56, 0.5, -12),
 			BackgroundColor3 = self.Value and theme.ToggleOn or theme.ToggleOff,
 			AutoButtonColor = false,
 			Parent = self.Container,
@@ -236,19 +239,22 @@ return (function()
 		self.Theme = theme
 		self.HasDesc = self.Description ~= nil and self.Description ~= ""
 		local h = self.HasDesc and theme.DescHeight or theme.ElementHeight
-		local trackY = self.HasDesc and 30 or 16
+		local trackY = self.HasDesc and 30 or 18
 
 		self.Container = U.Create("Frame", {
 			Name = "Slider",
-			Size = UDim2.new(1, 0, 0, h),
-			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, h + 8),
+			BackgroundColor3 = theme.Element,
+			BackgroundTransparency = 0.4,
+			BorderSizePixel = 0,
 			Parent = parent,
 		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.Container })
 
 		self.Label = U.Create("TextLabel", {
 			Name = "Label",
-			Size = UDim2.new(1, -60, 0, 20),
-			Position = UDim2.fromOffset(0, 2),
+			Size = UDim2.new(1, -70, 0, 20),
+			Position = UDim2.fromOffset(10, 4),
 			BackgroundTransparency = 1,
 			Text = self.Text,
 			Font = theme.Font,
@@ -262,7 +268,7 @@ return (function()
 		self.ValueLabel = U.Create("TextLabel", {
 			Name = "Value",
 			Size = UDim2.fromOffset(50, 20),
-			Position = UDim2.new(1, -50, 0, 2),
+			Position = UDim2.new(1, -56, 0, 4),
 			BackgroundTransparency = 1,
 			Text = tostring(self.Value) .. self.Suffix,
 			Font = theme.FontBold,
@@ -274,12 +280,13 @@ return (function()
 		})
 
 		local trackH = 6
+		local trackPad = 10
 		local fillPct = (self.Max ~= self.Min) and (self.Value - self.Min) / (self.Max - self.Min) or 0
 
 		self.Track = U.Create("Frame", {
 			Name = "Track",
-			Size = UDim2.new(1, 0, 0, trackH),
-			Position = UDim2.fromOffset(0, trackY),
+			Size = UDim2.new(1, -(trackPad * 2), 0, trackH),
+			Position = UDim2.fromOffset(trackPad, trackY),
 			BackgroundColor3 = theme.ToggleOff,
 			BorderSizePixel = 0,
 			Parent = self.Container,
@@ -351,8 +358,8 @@ return (function()
 		if self.HasDesc then
 			U.Create("TextLabel", {
 				Name = "Description",
-				Size = UDim2.new(1, 0, 0, 16),
-				Position = UDim2.fromOffset(0, trackY + trackH + 4),
+				Size = UDim2.new(1, -20, 0, 16),
+				Position = UDim2.fromOffset(10, trackY + trackH + 4),
 				BackgroundTransparency = 1,
 				Text = self.Description,
 				Font = theme.Font,
@@ -406,19 +413,22 @@ return (function()
 		self.Open = false
 		self.HasDesc = self.Description ~= nil and self.Description ~= ""
 		local h = self.HasDesc and theme.DescHeight or theme.ElementHeight
-		local selectY = self.HasDesc and 26 or 8
+		local selectY = self.HasDesc and 28 or 10
 
 		self.Container = U.Create("Frame", {
 			Name = "Dropdown",
-			Size = UDim2.new(1, 0, 0, h),
-			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, h + 8),
+			BackgroundColor3 = theme.Element,
+			BackgroundTransparency = 0.4,
+			BorderSizePixel = 0,
 			Parent = parent,
 		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.Container })
 
 		U.Create("TextLabel", {
 			Name = "Label",
-			Size = UDim2.new(1, -60, 0, 20),
-			Position = UDim2.fromOffset(0, 2),
+			Size = UDim2.new(1, -70, 0, 20),
+			Position = UDim2.fromOffset(10, 4),
 			BackgroundTransparency = 1,
 			Text = self.Text,
 			Font = theme.Font,
@@ -431,8 +441,8 @@ return (function()
 
 		self.SelectBtn = U.Create("ImageButton", {
 			Name = "Select",
-			Size = UDim2.new(1, 0, 0, 24),
-			Position = UDim2.fromOffset(0, selectY),
+			Size = UDim2.new(1, -(10 * 2), 0, 24),
+			Position = UDim2.fromOffset(10, selectY),
 			BackgroundColor3 = theme.Element,
 			AutoButtonColor = false,
 			Parent = self.Container,
@@ -472,8 +482,8 @@ return (function()
 
 		self.Panel = U.Create("ScrollingFrame", {
 			Name = "Panel",
-			Size = UDim2.new(1, 0, 0, panelH),
-			Position = UDim2.new(0, 0, 0, selectY + 26),
+			Size = UDim2.new(1, -(10 * 2), 0, panelH),
+			Position = UDim2.new(0, 10, 0, selectY + 26),
 			BackgroundColor3 = theme.Element,
 			BorderSizePixel = 0,
 			ScrollBarThickness = 3,
@@ -547,8 +557,8 @@ return (function()
 		if self.HasDesc then
 			U.Create("TextLabel", {
 				Name = "Description",
-				Size = UDim2.new(1, 0, 0, 16),
-				Position = UDim2.fromOffset(0, selectY + 52),
+				Size = UDim2.new(1, -20, 0, 16),
+				Position = UDim2.fromOffset(10, selectY + 52),
 				BackgroundTransparency = 1,
 				Text = self.Description,
 				Font = theme.Font,
@@ -647,7 +657,8 @@ return (function()
 
 		self.Container = U.Create("ScrollingFrame", {
 			Name = "TabContent",
-			Size = UDim2.new(1, 0, 1, 0),
+			Size = UDim2.new(1, -12, 1, -6),
+			Position = UDim2.fromOffset(6, 3),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			ScrollBarThickness = 3,
@@ -707,14 +718,19 @@ return (function()
 
 		btn.Container = U.Create("Frame", {
 			Name = "ButtonContainer",
-			Size = UDim2.new(1, 0, 0, h + 2),
-			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, h + 8),
+			BackgroundColor3 = theme.Element,
+			BackgroundTransparency = 0.4,
+			BorderSizePixel = 0,
 			Parent = self.Container,
 		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = btn.Container })
 
 		btn.Button = U.Create("ImageButton", {
 			Name = "Button",
-			Size = UDim2.new(1, 0, 0, h),
+			Size = UDim2.new(0.5, 0, 0, h),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, 0, 0.5, 0),
 			BackgroundColor3 = theme.Element,
 			AutoButtonColor = false,
 			Parent = btn.Container,
