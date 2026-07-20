@@ -1188,8 +1188,8 @@ return (function()
 		local frameAbs = self.Frame.AbsolutePosition
 		local frameSiz = self.Frame.AbsoluteSize
 		local px = frameAbs.X + frameSiz.X
-		local py = frameAbs.Y + theme.TopbarHeight + 4
-		local panelH = frameSiz.Y - (theme.TopbarHeight + 6)
+		local py = frameAbs.Y
+		local panelH = frameSiz.Y
 		local vs = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
 		if py + panelH > vs.Y then panelH = vs.Y - py - 4 end
 
@@ -1207,42 +1207,18 @@ return (function()
 		U.Create("UIStroke", {
 			Color = theme.Border,
 			Thickness = 1,
-			Transparency = 0.3,
+			Transparency = 0.25,
 			Parent = popup,
 		})
 		U.Create("UIPadding", {
-			PaddingTop = UDim.new(0, 6),
+			PaddingTop = UDim.new(0, 4),
 			PaddingLeft = UDim.new(0, 4),
 			PaddingRight = UDim.new(0, 4),
-			Parent = popup,
-		})
-		-- Separator line on the left
-		U.Create("Frame", {
-			Name = "SideLine",
-			Size = UDim2.new(0, 1, 1, -16),
-			Position = UDim2.fromOffset(0, 8),
-			BackgroundColor3 = theme.Border,
-			BorderSizePixel = 0,
-			BackgroundTransparency = 0.3,
-			ZIndex = 10001,
 			Parent = popup,
 		})
 		U.Create("UIListLayout", {
 			Padding = UDim.new(0, 2),
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Parent = popup,
-		})
-		-- Header showing current value
-		U.Create("TextLabel", {
-			Name = "Header",
-			Size = UDim2.new(1, -8, 0, 28),
-			BackgroundTransparency = 1,
-			Text = opts[selectedIdx] and tostring(opts[selectedIdx]) or "",
-			Font = theme.FontBold,
-			TextSize = theme.FontSizeSmall,
-			TextColor3 = theme.TextMuted,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			ZIndex = 10001,
 			Parent = popup,
 		})
 
@@ -1492,7 +1468,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.4.8", Theme = Theme }
+	local FyyUI = { Version = "0.4.9", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
