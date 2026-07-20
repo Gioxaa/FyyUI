@@ -1183,37 +1183,47 @@ return (function()
 		self:HideDropdownPopup()
 
 		local uis = game:GetService("UserInputService")
-		local itemH = 28
 		local pad = 4
 		local count = #opts
-		local maxH = 160
-		local panelH = math.min(count * itemH + pad, maxH)
-		local w = math.max(atSize.X, 130)
-		local vs = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
+		local w = 150
+		local theme = self.Theme
 
-		-- Position OUTSIDE Frame, right side (like v0.3.1 flyout)
+		-- Full height like a tab content panel
 		local frameAbs = self.Frame.AbsolutePosition
 		local frameSiz = self.Frame.AbsoluteSize
 		local px = frameAbs.X + frameSiz.X + 4
-		local py = frameAbs.Y + self.Theme.TopbarHeight + 4
+		local py = frameAbs.Y + theme.TopbarHeight + 4
+		local panelH = frameSiz.Y - (theme.TopbarHeight + 8)
+		local vs = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
 		if px + w > vs.X then px = vs.X - w - 4 end
-		if py + panelH > vs.Y then py = vs.Y - panelH - 4 end
+		if py + panelH > vs.Y then panelH = vs.Y - py - 4 end
 
-		-- Create popup Frame DIRECTLY in ScreenGui
+		-- Create popup — FULL HEIGHT kaya tab content
 		local popup = U.Create("Frame", {
 			Name = "DropdownPopup",
 			Size = UDim2.fromOffset(w, panelH),
 			Position = UDim2.fromOffset(px, py),
-			BackgroundColor3 = self.Theme.Element,
+			BackgroundColor3 = theme.Sidebar,
 			BorderSizePixel = 0,
 			ZIndex = 10000,
 			Parent = self.Gui,
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = popup })
-		U.Create("UIStroke", {
-			Color = self.Theme.Border,
-			Thickness = 1,
-			Transparency = 0.4,
+		-- Left border line (like sidebar separator)
+		U.Create("Frame", {
+			Name = "SideLine",
+			Size = UDim2.new(0, 1, 1, -16),
+			Position = UDim2.fromOffset(0, 8),
+			BackgroundColor3 = self.Theme.Border,
+			BorderSizePixel = 0,
+			BackgroundTransparency = 0.4,
+			ZIndex = 10001,
+			Parent = popup,
+		})
+		U.Create("UIPadding", {
+			PaddingTop = UDim.new(0, 8),
+			PaddingLeft = UDim.new(0, 4),
+			PaddingRight = UDim.new(0, 4),
 			Parent = popup,
 		})
 		U.Create("UIListLayout", {
@@ -1221,16 +1231,14 @@ return (function()
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Parent = popup,
 		})
-
 		for i, opt in ipairs(opts) do
 			local sel = i == selectedIdx
 			local btn = U.Create("TextButton", {
 				Name = "Option",
-				Size = UDim2.new(1, -pad * 2, 0, itemH),
-				Position = UDim2.fromOffset(pad, 0),
+				Size = UDim2.new(1, -8, 0, 32),
 				Text = "",
-				BackgroundColor3 = sel and self.Theme.Accent or self.Theme.ElementHover,
-				BackgroundTransparency = 0,
+				BackgroundColor3 = sel and theme.Accent or Color3.new(0, 0, 0),
+				BackgroundTransparency = sel and 0.15 or 1,
 				AutoButtonColor = false,
 				ZIndex = 10001,
 				Parent = popup,
@@ -1238,13 +1246,13 @@ return (function()
 			U.Create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = btn })
 			U.Create("TextLabel", {
 				Name = "Label",
-				Size = UDim2.new(1, -12, 1, 0),
-				Position = UDim2.fromOffset(8, 0),
+				Size = UDim2.new(1, -14, 1, 0),
+				Position = UDim2.fromOffset(10, 0),
 				BackgroundTransparency = 1,
 				Text = tostring(opt),
-				Font = self.Theme.Font,
-				TextSize = self.Theme.FontSize,
-				TextColor3 = self.Theme.TextPrimary,
+				Font = theme.Font,
+				TextSize = theme.FontSize,
+				TextColor3 = theme.SidebarTextActive,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				ZIndex = 10002,
 				Parent = btn,
@@ -1252,6 +1260,12 @@ return (function()
 			btn.MouseButton1Click:Connect(function()
 				onClick(i, opt)
 				self:HideDropdownPopup()
+			end)
+			btn.MouseEnter:Connect(function()
+				if not sel then btn.BackgroundTransparency = 0.85 end
+			end)
+			btn.MouseLeave:Connect(function()
+				if not sel then btn.BackgroundTransparency = 1 end
 			end)
 		end
 
@@ -1458,7 +1472,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.4.6", Theme = Theme }
+	local FyyUI = { Version = "0.4.7", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
