@@ -22,11 +22,13 @@ return (function()
 			Element = Color3.fromRGB(35, 35, 42),
 			ElementHover = Color3.fromRGB(45, 45, 54),
 			ElementBorder = Color3.fromRGB(48, 48, 56),
+			Outline = Color3.fromRGB(40, 40, 50),
 			ToggleOn = Color3.fromRGB(0, 180, 80),
 			ToggleOff = Color3.fromRGB(55, 55, 65),
 			ToggleKnob = Color3.fromRGB(210, 210, 220),
 			Border = Color3.fromRGB(40, 40, 48),
 			ScrollBar = Color3.fromRGB(65, 65, 78),
+			Shadow = Color3.fromRGB(0, 0, 0),
 			Font = Enum.Font.SourceSans,
 			FontBold = Enum.Font.SourceSansBold,
 			FontSize = 15,
@@ -51,11 +53,13 @@ return (function()
 			Element = Color3.fromRGB(222, 222, 232),
 			ElementHover = Color3.fromRGB(212, 212, 224),
 			ElementBorder = Color3.fromRGB(208, 208, 218),
+			Outline = Color3.fromRGB(200, 200, 215),
 			ToggleOn = Color3.fromRGB(0, 165, 75),
 			ToggleOff = Color3.fromRGB(178, 178, 190),
 			ToggleKnob = Color3.fromRGB(242, 242, 248),
 			Border = Color3.fromRGB(208, 208, 220),
 			ScrollBar = Color3.fromRGB(178, 178, 192),
+			Shadow = Color3.fromRGB(0, 0, 0),
 			Font = Enum.Font.SourceSans,
 			FontBold = Enum.Font.SourceSansBold,
 			FontSize = 15,
@@ -186,29 +190,19 @@ return (function()
 	end
 
 	function Toggle:GetValue() return self.Value end
-
 	function Toggle:SetEnabled(enabled)
 		self.Enabled = enabled
 		local t = enabled and 0 or 0.5
 		self.Track.BackgroundTransparency = t
 		self.Knob.BackgroundTransparency = t
 	end
-
-	function Toggle:SetText(text)
-		self.Text = text
-		self.Label.Text = text
-	end
-
+	function Toggle:SetText(text) self.Text = text self.Label.Text = text end
 	function Toggle:SetDescription(desc)
 		self.Description = desc
-		if self.Container:FindFirstChild("Description") then
-			self.Container.Description.Text = desc or ""
-		end
+		local d = self.Container:FindFirstChild("Description")
+		if d then d.Text = desc or "" end
 	end
-
-	function Toggle:Destroy()
-		if self.Container then self.Container:Destroy() end
-	end
+	function Toggle:Destroy() if self.Container then self.Container:Destroy() end end
 
 	local Menu = {}
 	Menu.__index = Menu
@@ -219,8 +213,11 @@ return (function()
 		self.Theme = theme
 		self.Components = {}
 		self.Visible = options.Visible ~= false
+		self.MinSize = options.MinSize
+		self.MaxSize = options.MaxSize
+		self.Resizable = options.Resizable or false
 
-		local size = options.Size or Vector2.new(450, 550)
+		local size = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(420, 360)
 		local pos = options.Position or UDim2.new(0.5, -size.X / 2, 0.5, -size.Y / 2)
 
 		self.Gui = U.Create("ScreenGui", {
@@ -235,26 +232,32 @@ return (function()
 			Size = UDim2.fromOffset(size.X, size.Y),
 			Position = pos,
 			BackgroundColor3 = theme.Background,
+			BackgroundTransparency = options.Transparent and 0.15 or 0,
 			BorderSizePixel = 0,
 			Parent = self.Gui,
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(0, theme.CornerRadius), Parent = self.Frame })
 
-		local shadow = U.Create("ImageLabel", {
+		if options.HasOutline ~= false then
+			U.Create("UIStroke", {
+				Color = theme.Outline,
+				Thickness = 1,
+				Transparency = 0.25,
+				Parent = self.Frame,
+			})
+		end
+
+		local shadowFrame = U.Create("Frame", {
 			Name = "Shadow",
-			Size = UDim2.fromOffset(size.X + 12, size.Y + 12),
-			Position = UDim2.fromOffset(-6, -6),
-			BackgroundTransparency = 1,
-			Image = "rbxassetid://6015897843",
-			ImageTransparency = 0.6,
-			ScaleType = Enum.ScaleType.Slice,
-			SliceCenter = Rect.new(10, 10, 118, 118),
-			ZIndex = -1,
+			Size = UDim2.fromOffset(size.X + 16, size.Y + 16),
+			Position = UDim2.fromOffset(-8, -8),
+			BackgroundColor3 = theme.Shadow,
+			BackgroundTransparency = 0.55,
+			BorderSizePixel = 0,
+			ZIndex = 0,
+			Parent = self.Gui,
 		})
-		spawn(function()
-			task.wait()
-			shadow.Parent = self.Gui
-		end)
+		U.Create("UICorner", { CornerRadius = UDim.new(0, theme.CornerRadius + 2), Parent = shadowFrame })
 
 		self.Topbar = U.Create("Frame", {
 			Name = "Topbar",
@@ -273,6 +276,132 @@ return (function()
 			BorderSizePixel = 0,
 			Parent = self.Topbar,
 		})
+
+		local topCfg = options.Topbar or {}
+		local btnType = topCfg.ButtonsType or "Default"
+		local titleAlign = topCfg.TitleAlignment or "Left"
+
+		local leftMargin = 10
+		local rightMargin = 10
+
+		if btnType == "Mac" then
+			local btnColors = {
+				Close = Color3.fromRGB(255, 95, 87),
+				Minimize = Color3.fromRGB(255, 189, 46),
+				Maximize = Color3.fromRGB(39, 201, 63),
+			}
+
+			local macY = UDim2.new(0.5, -6)
+			local btnSize = 12
+			local spacing = 6
+
+			local function macBtn(name, color, action)
+				local b = U.Create("ImageButton", {
+					Name = name,
+					Size = UDim2.fromOffset(btnSize, btnSize),
+					Position = UDim2.new(0, rightMargin, 0.5, -btnSize/2),
+					BackgroundColor3 = color,
+					AutoButtonColor = false,
+					Parent = self.Topbar,
+				})
+				U.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = b })
+				b.MouseButton1Click:Connect(action)
+				rightMargin = rightMargin + btnSize + spacing
+				return b
+			end
+
+			macBtn("Close", btnColors.Close, function() self:SetVisible(false) end)
+			macBtn("Minimize", btnColors.Minimize, function()
+				self.Minimized = not self.Minimized
+				if self.Minimized then
+					self._prevSize = self.Frame.Size
+					self.Frame.Size = UDim2.fromOffset(self.Frame.Size.X.Offset, theme.TopbarHeight + 8)
+					self.Container.Visible = false
+				else
+					self.Frame.Size = self._prevSize or UDim2.fromOffset(size.X, size.Y)
+					self.Container.Visible = true
+				end
+			end)
+			macBtn("Maximize", btnColors.Maximize, function()
+				self.Maximized = not self.Maximized
+				if self.Maximized then
+					self._prevPos = self.Frame.Position
+					self._prevSize = self.Frame.Size
+					local vs = game:GetService("GuiService"):GetViewportSize()
+					self.Frame.Size = UDim2.fromOffset(vs.X - 40, vs.Y - 40)
+					self.Frame.Position = UDim2.fromOffset(20, 20)
+				else
+					self.Frame.Position = self._prevPos or pos
+					self.Frame.Size = self._prevSize or UDim2.fromOffset(size.X, size.Y)
+				end
+				self._updateShadow()
+			end)
+
+			leftMargin = rightMargin + 8
+			rightMargin = 10
+		else
+			self.CloseBtn = U.Create("ImageButton", {
+				Name = "Close",
+				Size = UDim2.fromOffset(26, 26),
+				Position = UDim2.new(1, -36, 0.5, -13),
+				BackgroundColor3 = Color3.fromRGB(60, 60, 72),
+				BackgroundTransparency = 0.4,
+				AutoButtonColor = false,
+				Parent = self.Topbar,
+			})
+			self.CloseBtn.MouseEnter:Connect(function()
+				self.CloseBtn.BackgroundTransparency = 0
+				self.CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+			end)
+			self.CloseBtn.MouseLeave:Connect(function()
+				self.CloseBtn.BackgroundTransparency = 0.4
+				self.CloseBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 72)
+			end)
+			U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.CloseBtn })
+			U.Create("TextLabel", {
+				Name = "Icon",
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				BackgroundTransparency = 1,
+				Text = "X",
+				Font = theme.FontBold,
+				TextSize = 14,
+				TextColor3 = Color3.fromRGB(180, 180, 195),
+				Parent = self.CloseBtn,
+			})
+			self.CloseBtn.MouseButton1Click:Connect(function() self:SetVisible(false) end)
+		end
+
+		local titleLeft = leftMargin
+
+		if options.Logo then
+			local logoSize = 26
+			U.Create("ImageLabel", {
+				Name = "Logo",
+				Size = UDim2.fromOffset(logoSize, logoSize),
+				Position = UDim2.fromOffset(leftMargin, (theme.TopbarHeight - logoSize) / 2),
+				BackgroundTransparency = 1,
+				Image = options.Logo,
+				ScaleType = Enum.ScaleType.Fit,
+				Parent = self.Topbar,
+			})
+			titleLeft = leftMargin + logoSize + 8
+		end
+
+		self.Title = U.Create("TextLabel", {
+			Name = "Title",
+			Size = UDim2.new(1, -(titleLeft + 50), 1, 0),
+			Position = UDim2.fromOffset(titleLeft, 0),
+			BackgroundTransparency = 1,
+			Text = options.Title or "FyyUI",
+			Font = theme.FontBold,
+			TextSize = theme.FontSizeTitle,
+			TextColor3 = theme.TextPrimary,
+			TextXAlignment = titleAlign == "Right" and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left,
+			RichText = true,
+			Parent = self.Topbar,
+		})
+
 		U.Create("Frame", {
 			Name = "AccentLine",
 			Size = UDim2.new(1, -20, 0, 2),
@@ -280,43 +409,6 @@ return (function()
 			BackgroundColor3 = theme.AccentLine,
 			BorderSizePixel = 0,
 			Parent = self.Topbar,
-		})
-
-		self.Title = U.Create("TextLabel", {
-			Name = "Title",
-			Size = UDim2.new(1, -80, 1, 0),
-			Position = UDim2.fromOffset(14, 0),
-			BackgroundTransparency = 1,
-			Text = options.Title or "FyyUI",
-			Font = theme.FontBold,
-			TextSize = theme.FontSizeTitle,
-			TextColor3 = theme.TextPrimary,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Parent = self.Topbar,
-		})
-
-		self.CloseBtn = U.Create("ImageButton", {
-			Name = "Close",
-			Size = UDim2.fromOffset(26, 26),
-			Position = UDim2.new(1, -36, 0.5, -13),
-			BackgroundColor3 = Color3.fromRGB(50, 50, 60),
-			BackgroundTransparency = 1,
-			AutoButtonColor = false,
-			Parent = self.Topbar,
-		})
-		self.CloseBtn.MouseEnter:Connect(function() self.CloseBtn.BackgroundTransparency = 0 end)
-		self.CloseBtn.MouseLeave:Connect(function() self.CloseBtn.BackgroundTransparency = 1 end)
-		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.CloseBtn })
-		U.Create("TextLabel", {
-			Name = "Icon",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			BackgroundTransparency = 1,
-			Text = "\215",
-			Font = theme.FontBold,
-			TextSize = 18,
-			TextColor3 = Color3.fromRGB(170, 170, 185),
-			Parent = self.CloseBtn,
 		})
 
 		self.Container = U.Create("ScrollingFrame", {
@@ -340,37 +432,53 @@ return (function()
 			Parent = self.Container,
 		})
 
+		self._shadow = shadowFrame
+		self._updateShadow = function()
+			if not self._shadow then return end
+			local s = self.Frame.Size
+			self._shadow.Size = UDim2.fromOffset(s.X.Offset + 16, s.Y.Offset + 16)
+			self._shadow.Position = UDim2.fromOffset(
+				self.Frame.Position.X.Offset - 8,
+				self.Frame.Position.Y.Offset - 8
+			end)
+		end
+
 		self:_dragging()
-		self.CloseBtn.MouseButton1Click:Connect(function() self:SetVisible(false) end)
 
 		self.Gui.Parent = options.Parent or game:GetService("CoreGui")
+
+		if self.Resizable then
+			self:_resizable()
+		end
+
 		return self
 	end
 
 	function Menu:_dragging()
 		local topbar = self.Topbar
 		local frame = self.Frame
-		local dragging, dragStart, startPos
+		local shadow = self._shadow
+		local dragging, ds, sp
 
 		topbar.InputBegan:Connect(function(input)
 			local t = input.UserInputType
 			if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch then
 				dragging = true
-				dragStart = input.Position
-				startPos = frame.Position
+				ds = input.Position
+				sp = frame.Position
 			end
 		end)
 		topbar.InputChanged:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
-				local delta = input.Position - dragStart
+				local delta = input.Position - ds
 				frame.Position = UDim2.new(
-					startPos.X.Scale, startPos.X.Offset + delta.X,
-					startPos.Y.Scale, startPos.Y.Offset + delta.Y
+					sp.X.Scale, sp.X.Offset + delta.X,
+					sp.Y.Scale, sp.Y.Offset + delta.Y
 				)
 				if shadow then
 					shadow.Position = UDim2.new(
-						startPos.X.Scale, startPos.X.Offset + delta.X - 6,
-						startPos.Y.Scale, startPos.Y.Offset + delta.Y - 6
+						sp.X.Scale, sp.X.Offset + delta.X - 8,
+						sp.Y.Scale, sp.Y.Offset + delta.Y - 8
 					)
 				end
 			end
@@ -379,6 +487,56 @@ return (function()
 			local t = input.UserInputType
 			if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch then
 				dragging = false
+			end
+		end)
+	end
+
+	function Menu:_resizable()
+		local grip = U.Create("ImageButton", {
+			Name = "ResizeGrip",
+			Size = UDim2.fromOffset(14, 14),
+			Position = UDim2.new(1, -14, 1, -14),
+			BackgroundColor3 = self.Theme.TextMuted,
+			BackgroundTransparency = 0.6,
+			AutoButtonColor = false,
+			Parent = self.Frame,
+		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 2), Parent = grip })
+
+		local frame = self.Frame
+		local shadow = self._shadow
+		local resizing, rs, rp, rsiz
+
+		grip.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				resizing = true
+				rs = input.Position
+				rp = frame.Position
+				rsiz = frame.Size
+			end
+		end)
+		grip.InputChanged:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement and resizing then
+				local delta = input.Position - rs
+				local nw = math.max(200, rsiz.X.Offset + delta.X)
+				local nh = math.max(140, rsiz.Y.Offset + delta.Y)
+				if self.MinSize then
+					nw = math.max(nw, self.MinSize.X)
+					nh = math.max(nh, self.MinSize.Y)
+				end
+				if self.MaxSize then
+					nw = math.min(nw, self.MaxSize.X)
+					nh = math.min(nh, self.MaxSize.Y)
+				end
+				frame.Size = UDim2.fromOffset(nw, nh)
+				if shadow then
+					shadow.Size = UDim2.fromOffset(nw + 16, nh + 16)
+				end
+			end
+		end)
+		grip.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				resizing = false
 			end
 		end)
 	end
@@ -452,16 +610,9 @@ return (function()
 			})
 		end
 
-		btn.Button.MouseEnter:Connect(function()
-			btn.Button.BackgroundColor3 = theme.ElementHover
-		end)
-		btn.Button.MouseLeave:Connect(function()
-			btn.Button.BackgroundColor3 = theme.Element
-		end)
-		btn.Button.MouseButton1Click:Connect(function()
-			if options.Callback then options.Callback() end
-		end)
-
+		btn.Button.MouseEnter:Connect(function() btn.Button.BackgroundColor3 = theme.ElementHover end)
+		btn.Button.MouseLeave:Connect(function() btn.Button.BackgroundColor3 = theme.Element end)
+		btn.Button.MouseButton1Click:Connect(function() if options.Callback then options.Callback() end end)
 		btn.SetText = function(text)
 			local t = btn.Button:FindFirstChild("Text")
 			if t then t.Text = text end

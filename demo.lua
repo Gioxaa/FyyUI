@@ -1,50 +1,55 @@
 -- FyyUI Demo
--- Load dari GitHub (ganti kalo fork)
-local FyyUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FyyWannaFly/FyyUI/main/fyyui.lua"))()
+-- local FyyUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FyyWannaFly/FyyUI/main/fyyui.lua"))()
+local FyyUI = require(script.fyyui)
 
--- Kalo lokal: local FyyUI = require(script.fyyui)
+-- Pake Logo (optional: kasih rbxassetid)
+-- local menu = FyyUI.Menu({
+--     Title = "FyyUI Hub",
+--     Logo = "rbxassetid://123456789",
+--     Size = UDim2.fromOffset(530, 300),
+--     MinSize = Vector2.new(320, 300),
+--     MaxSize = Vector2.new(850, 560),
+--     Resizable = true,
+--     HasOutline = true,
+--     Topbar = { ButtonsType = "Mac", TitleAlignment = "Left" },
+-- })
 
 local menu = FyyUI.Menu({
 	Title = "FyyUI Hub",
-	Size = Vector2.new(460, 580),
-	Theme = "Dark",
+	Size = UDim2.fromOffset(420, 360),
+	MinSize = Vector2.new(300, 250),
+	MaxSize = Vector2.new(800, 560),
+	Resizable = true,
+	HasOutline = true,
 })
 
 menu:Toggle({
 	Text = "Auto Farm",
-	Description = "Automatically farms ores in the mine",
+	Description = "Automatically farms ores",
 	Default = false,
-	Callback = function(state)
-		print("[Auto Farm]", state)
-	end,
+	Callback = function(v) print("[Auto Farm]", v) end,
 })
 
 menu:Toggle({
 	Text = "Auto Collect",
-	Description = "Collects dropped items automatically",
+	Description = "Collects dropped items",
 	Default = true,
-	Callback = function(state)
-		print("[Auto Collect]", state)
-	end,
+	Callback = function(v) print("[Auto Collect]", v) end,
 })
 
 menu:Divider()
 
 menu:Button({
 	Text = "Toggle All",
-	Description = "Enable or disable all features at once",
-	Callback = function()
-		print("Toggle All pressed!")
-	end,
+	Description = "Enable or disable all features",
+	Callback = function() print("Toggle All!") end,
 })
 
 menu:Button({
 	Text = "Stop",
-	Description = "Stops all running automation",
+	Description = "Stops all automation",
 	Color = Color3.fromRGB(255, 80, 80),
-	Callback = function()
-		print("Stopped!")
-	end,
+	Callback = function() print("Stopped!") end,
 })
 
 menu:Divider()
@@ -54,7 +59,7 @@ menu:Label({
 	Description = "All systems operational",
 })
 
-local statusLabel = menu:Label({
+menu:Label({
 	Text = "Connected",
 	Color = Color3.fromRGB(0, 200, 100),
 })
