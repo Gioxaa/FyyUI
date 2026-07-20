@@ -1209,12 +1209,13 @@ return (function()
 		local w = math.max(atSize.X, 130)
 		local vs = game:GetService("GuiService"):GetViewportSize()
 
-		-- Position at Frame's right edge (flyout-style)
-		local framePos = self.Frame.AbsolutePosition
-		local frameSiz = self.Frame.AbsoluteSize
-		local popupX = framePos.X + frameSiz.X - w
+		-- Position to the RIGHT of the SelectBtn (flyout-style)
+		local popupX = atPos.X + atSize.X + 4
 		local popupY = atPos.Y
-		if popupX + w > vs.X then popupX = vs.X - w - 4 end
+		if popupX + w > vs.X then
+			popupX = atPos.X
+			popupY = atPos.Y + atSize.Y
+		end
 		if popupY + panelH > vs.Y then popupY = vs.Y - panelH - 4 end
 
 		local popup = U.Create("Frame", {
