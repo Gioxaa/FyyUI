@@ -1,8 +1,8 @@
 -- FyyUI Demo
--- Ganti URL ini setelah di-push ke GitHub
--- local FyyUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/fyyhub/FyyUI/main/fyyui.lua"))()
+-- Load dari GitHub (ganti kalo fork)
+local FyyUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FyyWannaFly/FyyUI/main/fyyui.lua"))()
 
-local FyyUI = require(script.fyyui)
+-- Kalo lokal: local FyyUI = require(script.fyyui)
 
 local menu = FyyUI.Menu({
 	Title = "FyyUI Hub",
