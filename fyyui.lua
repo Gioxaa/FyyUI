@@ -968,7 +968,7 @@ return (function()
 				if self.Maximized then
 					self._prevPos = self.Frame.Position
 					self._prevSize = self.Frame.Size
-					local vs = game:GetService("GuiService"):GetViewportSize()
+		local vs = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
 					self.Frame.Size = UDim2.fromOffset(vs.X - 40, vs.Y - 40)
 					self.Frame.Position = UDim2.fromOffset(20, 20)
 				else
@@ -1456,7 +1456,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.4.2", Theme = Theme }
+	local FyyUI = { Version = "0.4.3", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
