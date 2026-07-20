@@ -123,11 +123,14 @@ return (function()
 
 		self.Container = U.Create("Frame", {
 			Name = "Toggle",
-			Size = UDim2.new(1, 0, 0, h + 6),
-			BackgroundTransparency = 1,
+			Size = UDim2.new(1, -12, 0, h + 6),
+			Position = UDim2.fromOffset(6, 0),
+			BackgroundColor3 = theme.Element,
+			BackgroundTransparency = 0.4,
 			BorderSizePixel = 0,
 			Parent = parent,
 		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.Container })
 
 		self.Label = U.Create("TextLabel", {
 			Name = "Label",
@@ -241,11 +244,14 @@ return (function()
 
 		self.Container = U.Create("Frame", {
 			Name = "Slider",
-			Size = UDim2.new(1, 0, 0, h + 8),
-			BackgroundTransparency = 1,
+			Size = UDim2.new(1, -12, 0, h + 8),
+			Position = UDim2.fromOffset(6, 0),
+			BackgroundColor3 = theme.Element,
+			BackgroundTransparency = 0.4,
 			BorderSizePixel = 0,
 			Parent = parent,
 		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.Container })
 
 		self.Label = U.Create("TextLabel", {
 			Name = "Label",
@@ -413,11 +419,14 @@ return (function()
 
 		self.Container = U.Create("Frame", {
 			Name = "Dropdown",
-			Size = UDim2.new(1, 0, 0, h + 8),
-			BackgroundTransparency = 1,
+			Size = UDim2.new(1, -12, 0, h + 8),
+			Position = UDim2.fromOffset(6, 0),
+			BackgroundColor3 = theme.Element,
+			BackgroundTransparency = 0.4,
 			BorderSizePixel = 0,
 			Parent = parent,
 		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.Container })
 
 		U.Create("TextLabel", {
 			Name = "Label",
@@ -710,29 +719,22 @@ return (function()
 		local h = hasDesc and theme.DescHeight or theme.ElementHeight
 		local btn = {}
 
-		btn.Container = U.Create("Frame", {
-			Name = "ButtonContainer",
-			Size = UDim2.new(1, 0, 0, h + 8),
-			BackgroundTransparency = 1,
+		btn.Container = U.Create("ImageButton", {
+			Name = "Button",
+			Size = UDim2.new(1, -12, 0, h + 8),
+			Position = UDim2.fromOffset(6, 0),
+			BackgroundColor3 = theme.Element,
+			BackgroundTransparency = 0.4,
+			AutoButtonColor = false,
 			BorderSizePixel = 0,
 			Parent = self.Container,
 		})
-
-		btn.Button = U.Create("ImageButton", {
-			Name = "Button",
-			Size = UDim2.new(0.5, 0, 0, h),
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 0.5, 0),
-			BackgroundColor3 = theme.Element,
-			AutoButtonColor = false,
-			Parent = btn.Container,
-		})
-		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = btn.Button })
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = btn.Container })
 
 		if hasDesc then
 			U.Create("TextLabel", {
 				Name = "Text",
-				Size = UDim2.new(1, -16, 0, 20),
+				Size = UDim2.new(1, -20, 0, 20),
 				Position = UDim2.fromOffset(10, 5),
 				BackgroundTransparency = 1,
 				Text = options.Text or "Button",
@@ -740,11 +742,11 @@ return (function()
 				TextSize = theme.FontSize,
 				TextColor3 = options.Color or theme.TextPrimary,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				Parent = btn.Button,
+				Parent = btn.Container,
 			})
 			U.Create("TextLabel", {
 				Name = "Description",
-				Size = UDim2.new(1, -16, 0, 16),
+				Size = UDim2.new(1, -20, 0, 16),
 				Position = UDim2.fromOffset(10, 27),
 				BackgroundTransparency = 1,
 				Text = options.Description,
@@ -752,27 +754,28 @@ return (function()
 				TextSize = theme.FontSizeSmall,
 				TextColor3 = theme.TextMuted,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				Parent = btn.Button,
+				Parent = btn.Container,
 			})
 		else
 			U.Create("TextLabel", {
 				Name = "Text",
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.new(1, -20, 0, 20),
+				Position = UDim2.fromOffset(10, (h + 8 - 20) / 2),
 				BackgroundTransparency = 1,
 				Text = options.Text or "Button",
-				Font = theme.FontBold,
+				Font = theme.Font,
 				TextSize = theme.FontSize,
 				TextColor3 = options.Color or theme.TextPrimary,
-				Parent = btn.Button,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Parent = btn.Container,
 			})
 		end
 
-		btn.Button.MouseEnter:Connect(function() btn.Button.BackgroundColor3 = theme.ElementHover end)
-		btn.Button.MouseLeave:Connect(function() btn.Button.BackgroundColor3 = theme.Element end)
-		btn.Button.MouseButton1Click:Connect(function() if options.Callback then options.Callback() end end)
+		btn.Container.MouseEnter:Connect(function() btn.Container.BackgroundColor3 = theme.ElementHover end)
+		btn.Container.MouseLeave:Connect(function() btn.Container.BackgroundColor3 = theme.Element end)
+		btn.Container.MouseButton1Click:Connect(function() if options.Callback then options.Callback() end end)
 		btn.SetText = function(text)
-			local t = btn.Button:FindFirstChild("Text")
+			local t = btn.Container:FindFirstChild("Text")
 			if t then t.Text = text end
 		end
 		btn.SetCallback = function(cb) options.Callback = cb end
