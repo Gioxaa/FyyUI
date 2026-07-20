@@ -124,12 +124,10 @@ return (function()
 		self.Container = U.Create("Frame", {
 			Name = "Toggle",
 			Size = UDim2.new(1, 0, 0, h + 6),
-			BackgroundColor3 = theme.Element,
-			BackgroundTransparency = 0.4,
+			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			Parent = parent,
 		})
-		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.Container })
 
 		self.Label = U.Create("TextLabel", {
 			Name = "Label",
@@ -244,12 +242,10 @@ return (function()
 		self.Container = U.Create("Frame", {
 			Name = "Slider",
 			Size = UDim2.new(1, 0, 0, h + 8),
-			BackgroundColor3 = theme.Element,
-			BackgroundTransparency = 0.4,
+			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			Parent = parent,
 		})
-		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.Container })
 
 		self.Label = U.Create("TextLabel", {
 			Name = "Label",
@@ -418,12 +414,10 @@ return (function()
 		self.Container = U.Create("Frame", {
 			Name = "Dropdown",
 			Size = UDim2.new(1, 0, 0, h + 8),
-			BackgroundColor3 = theme.Element,
-			BackgroundTransparency = 0.4,
+			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			Parent = parent,
 		})
-		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.Container })
 
 		U.Create("TextLabel", {
 			Name = "Label",
@@ -719,12 +713,10 @@ return (function()
 		btn.Container = U.Create("Frame", {
 			Name = "ButtonContainer",
 			Size = UDim2.new(1, 0, 0, h + 8),
-			BackgroundColor3 = theme.Element,
-			BackgroundTransparency = 0.4,
+			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			Parent = self.Container,
 		})
-		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = btn.Container })
 
 		btn.Button = U.Create("ImageButton", {
 			Name = "Button",
@@ -1168,14 +1160,21 @@ return (function()
 			Parent = self.Frame,
 		})
 
-		-- Notification container
+		-- Notification (screen-level, bottom-right)
+		self._notifGui = U.Create("ScreenGui", {
+			Name = "FyyUI_Notifs",
+			DisplayOrder = 200,
+			IgnoreGuiInset = true,
+			Enabled = self.Visible,
+			Parent = game:GetService("CoreGui"),
+		})
 		self.NotifBox = U.Create("Frame", {
 			Name = "Notifications",
-			Size = UDim2.new(1, -20, 0, 0),
-			Position = UDim2.new(0, 10, 1, -10),
+			Size = UDim2.new(0, 320, 0, 0),
+			Position = UDim2.new(1, -330, 1, -10),
 			BackgroundTransparency = 1,
 			ZIndex = 50,
-			Parent = self.Frame,
+			Parent = self._notifGui,
 		})
 		local notifList = U.Create("UIListLayout", {
 			Padding = UDim.new(0, 4),
