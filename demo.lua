@@ -1,18 +1,5 @@
--- FyyUI Demo
--- local FyyUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FyyWannaFly/FyyUI/main/fyyui.lua"))()
-local FyyUI = require(script.fyyui)
-
--- Pake Logo (optional: kasih rbxassetid)
--- local menu = FyyUI.Menu({
---     Title = "FyyUI Hub",
---     Logo = "rbxassetid://123456789",
---     Size = UDim2.fromOffset(530, 300),
---     MinSize = Vector2.new(320, 300),
---     MaxSize = Vector2.new(850, 560),
---     Resizable = true,
---     HasOutline = true,
---     Topbar = { ButtonsType = "Mac", TitleAlignment = "Left" },
--- })
+local FyyUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FyyWannaFly/FyyUI/main/fyyui.lua"))()
+-- local FyyUI = require(script.fyyui)
 
 local menu = FyyUI.Menu({
 	Title = "FyyUI Hub",
