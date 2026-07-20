@@ -1188,8 +1188,8 @@ return (function()
 		local frameAbs = self.Frame.AbsolutePosition
 		local frameSiz = self.Frame.AbsoluteSize
 		local px = frameAbs.X + frameSiz.X
-		local py = frameAbs.Y
-		local panelH = frameSiz.Y
+		local py = frameAbs.Y - 8
+		local panelH = frameSiz.Y + 16
 
 		-- Create popup with 0 width → tween to slide in from right
 		local popup = U.Create("Frame", {
@@ -1233,7 +1233,7 @@ return (function()
 		U.Create("Frame", {
 			Name = "SideLine",
 			Size = UDim2.new(0, 1, 1, -(theme.TopbarHeight + 12)),
-			Position = UDim2.fromOffset(0, theme.TopbarHeight + 6),
+			Position = UDim2.fromOffset(0, theme.TopbarHeight + 14),
 			BackgroundColor3 = theme.Border,
 			BorderSizePixel = 0,
 			BackgroundTransparency = 0.3,
@@ -1487,7 +1487,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.5.1", Theme = Theme }
+	local FyyUI = { Version = "0.5.2", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
