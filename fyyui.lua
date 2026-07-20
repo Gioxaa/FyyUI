@@ -1189,7 +1189,7 @@ return (function()
 		local maxH = 160
 		local panelH = math.min(count * itemH + pad, maxH)
 		local w = math.max(atSize.X, 130)
-		local vs = game:GetService("GuiService"):GetViewportSize()
+		local vs = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
 
 		-- Position to the RIGHT of the SelectBtn
 		local px = atPos.X + atSize.X + 4
