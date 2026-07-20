@@ -1404,7 +1404,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.2.0", Theme = Theme }
+	local FyyUI = { Version = "0.2.5", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
