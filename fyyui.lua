@@ -316,6 +316,8 @@ return (function()
 		U.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = self.Knob })
 		self:_updateKnobPos()
 
+		local uis = game:GetService("UserInputService")
+
 		local function roundToStep(v)
 			return math.round(v / self.Step) * self.Step
 		end
@@ -326,8 +328,9 @@ return (function()
 				dragging = true
 			end
 		end)
-		local con
-		con = self.Knob.InputChanged:Connect(function(input)
+		local dragCon
+		dragCon = uis.InputChanged:Connect(function(input, processed)
+			if processed then return end
 			if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
 				local absPos = self.Track.AbsolutePosition.X
 				local size = self.Track.AbsoluteSize.X
@@ -343,6 +346,7 @@ return (function()
 				dragging = false
 			end
 		end)
+		self._dragCon = dragCon
 
 		-- Click on track to jump
 		self.Track.InputBegan:Connect(function(input)
@@ -397,7 +401,10 @@ return (function()
 	end
 
 	function Slider:GetValue() return self.Value end
-	function Slider:Destroy() if self.Container then self.Container:Destroy() end end
+	function Slider:Destroy()
+		if self._dragCon then self._dragCon:Disconnect() end
+		if self.Container then self.Container:Destroy() end
+	end
 
 	--[[ Dropdown ]]
 	local Dropdown = {}
@@ -893,7 +900,7 @@ return (function()
 		self.MaxSize = options.MaxSize or Vector2.new(850, 560)
 		self.Resizable = options.Resizable or false
 
-		local size = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(530, 300)
+		local size = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(610, 330)
 		local pos = options.Position or UDim2.new(0.5, -size.X / 2, 0.5, -size.Y / 2)
 
 		self.Gui = U.Create("ScreenGui", {
