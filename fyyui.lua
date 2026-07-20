@@ -477,8 +477,8 @@ return (function()
 			Size = UDim2.fromOffset(16, 16),
 			Position = UDim2.new(1, -20, 0.5, -8),
 			BackgroundTransparency = 1,
-			Text = "▾",
-			Font = theme.Font,
+			Text = "v",
+			Font = theme.FontBold,
 			TextSize = 14,
 			TextColor3 = theme.TextMuted,
 			Parent = self.SelectBtn,
@@ -1095,7 +1095,7 @@ return (function()
 		-- Flyout (right-side panel for dropdowns)
 		self._flyout = U.Create("Frame", {
 			Name = "Flyout",
-			Size = UDim2.new(0, 0, 1, -(theme.TopbarHeight + 6)),
+			Size = UDim2.new(0, 150, 1, -(theme.TopbarHeight + 6)),
 			Position = UDim2.new(1, 0, 0, theme.TopbarHeight + 4),
 			BackgroundColor3 = theme.Sidebar,
 			BorderSizePixel = 0,
@@ -1252,13 +1252,13 @@ return (function()
 				if not sel then btn.BackgroundTransparency = 0.3 end
 			end)
 		end
-		-- Animate in
-		flyout.Size = UDim2.new(0, 0, 1, -(self.Theme.TopbarHeight + 6))
+		-- Animate in: slide from right
+		flyout.Position = UDim2.new(1, 0, 0, self.Theme.TopbarHeight + 4)
 		flyout.Visible = true
 		self._flyoutOverlay.Visible = true
 		local ts = game:GetService("TweenService")
 		local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-		ts:Create(flyout, ti, { Size = UDim2.new(0, 150, 1, -(self.Theme.TopbarHeight + 6)) }):Play()
+		ts:Create(flyout, ti, { Position = UDim2.new(1, -150, 0, self.Theme.TopbarHeight + 4) }):Play()
 	end
 
 	function Menu:HideFlyout()
@@ -1266,7 +1266,7 @@ return (function()
 		if not flyout or not flyout.Visible then return end
 		local ts = game:GetService("TweenService")
 		local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-		ts:Create(flyout, ti, { Size = UDim2.new(0, 0, 1, -(self.Theme.TopbarHeight + 6)) }):Play()
+		ts:Create(flyout, ti, { Position = UDim2.new(1, 0, 0, self.Theme.TopbarHeight + 4) }):Play()
 		task.delay(0.2, function()
 			flyout.Visible = false
 			if self._flyoutOverlay then
