@@ -213,11 +213,11 @@ return (function()
 		self.Theme = theme
 		self.Components = {}
 		self.Visible = options.Visible ~= false
-		self.MinSize = options.MinSize
-		self.MaxSize = options.MaxSize
+		self.MinSize = options.MinSize or Vector2.new(320, 300)
+		self.MaxSize = options.MaxSize or Vector2.new(850, 560)
 		self.Resizable = options.Resizable or false
 
-		local size = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(420, 360)
+		local size = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(530, 300)
 		local pos = options.Position or UDim2.new(0.5, -size.X / 2, 0.5, -size.Y / 2)
 
 		self.Gui = U.Create("ScreenGui", {
@@ -232,7 +232,7 @@ return (function()
 			Size = UDim2.fromOffset(size.X, size.Y),
 			Position = pos,
 			BackgroundColor3 = theme.Background,
-			BackgroundTransparency = options.Transparent and 0.15 or 0,
+			BackgroundTransparency = options.BackgroundTransparency or (options.Transparent and 0.15 or 0),
 			BorderSizePixel = 0,
 			Parent = self.Gui,
 		})
@@ -247,17 +247,29 @@ return (function()
 			})
 		end
 
-		local shadowFrame = U.Create("Frame", {
-			Name = "Shadow",
-			Size = UDim2.fromOffset(size.X + 16, size.Y + 16),
-			Position = UDim2.fromOffset(-8, -8),
-			BackgroundColor3 = theme.Shadow,
-			BackgroundTransparency = 0.55,
-			BorderSizePixel = 0,
-			ZIndex = 0,
-			Parent = self.Gui,
-		})
-		U.Create("UICorner", { CornerRadius = UDim.new(0, theme.CornerRadius + 2), Parent = shadowFrame })
+		if options.Shadow then
+			local shadowFrame = U.Create("Frame", {
+				Name = "Shadow",
+				Size = UDim2.fromOffset(size.X + 16, size.Y + 16),
+				Position = UDim2.fromOffset(-8, -8),
+				BackgroundColor3 = theme.Shadow,
+				BackgroundTransparency = 0.55,
+				BorderSizePixel = 0,
+				ZIndex = 0,
+				Parent = self.Gui,
+			})
+			U.Create("UICorner", { CornerRadius = UDim.new(0, theme.CornerRadius + 2), Parent = shadowFrame })
+			self._shadow = shadowFrame
+			self._updateShadow = function()
+				if not self._shadow then return end
+				local s = self.Frame.Size
+				self._shadow.Size = UDim2.fromOffset(s.X.Offset + 16, s.Y.Offset + 16)
+				self._shadow.Position = UDim2.fromOffset(
+					self.Frame.Position.X.Offset - 8,
+					self.Frame.Position.Y.Offset - 8
+				)
+			end
+		end
 
 		self.Topbar = U.Create("Frame", {
 			Name = "Topbar",
@@ -334,7 +346,7 @@ return (function()
 					self.Frame.Position = self._prevPos or pos
 					self.Frame.Size = self._prevSize or UDim2.fromOffset(size.X, size.Y)
 				end
-				self._updateShadow()
+				if self._updateShadow then self._updateShadow() end
 			end)
 
 			leftMargin = rightMargin + 8
@@ -431,17 +443,6 @@ return (function()
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Parent = self.Container,
 		})
-
-		self._shadow = shadowFrame
-		self._updateShadow = function()
-			if not self._shadow then return end
-			local s = self.Frame.Size
-			self._shadow.Size = UDim2.fromOffset(s.X.Offset + 16, s.Y.Offset + 16)
-			self._shadow.Position = UDim2.fromOffset(
-				self.Frame.Position.X.Offset - 8,
-				self.Frame.Position.Y.Offset - 8
-			)
-		end
 
 		self:_dragging()
 
