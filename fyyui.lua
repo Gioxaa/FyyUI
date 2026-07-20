@@ -492,8 +492,8 @@ return (function()
 
 		self.Panel = U.Create("ScrollingFrame", {
 			Name = "Panel",
-			Size = UDim2.new(1, -(10 * 2), 0, panelH),
-			Position = UDim2.new(0, 10, 0, selectY + 26),
+			Size = UDim2.new(0, 0, 0, panelH),
+			Position = UDim2.fromOffset(0, 0),
 			BackgroundColor3 = theme.Element,
 			BorderSizePixel = 0,
 			ScrollBarThickness = 3,
@@ -501,8 +501,8 @@ return (function()
 			ScrollBarImageTransparency = 0.4,
 			CanvasSize = UDim2.new(0, 0, 0, 0),
 			Visible = false,
-			ZIndex = 10,
-			Parent = self.Container,
+			ZIndex = 1000,
+			Parent = self._menu.Gui,
 		})
 		local panelList = U.Create("UIListLayout", {
 			Padding = UDim.new(0, 2),
@@ -551,13 +551,13 @@ return (function()
 			self.Open = not self.Open
 			if self.Open then
 				local absPos = self.SelectBtn.AbsolutePosition
-				local frameAbs = self._menu.Frame.AbsolutePosition
-				local relX = absPos.X - frameAbs.X
-				local relY = absPos.Y - frameAbs.Y + self.SelectBtn.AbsoluteSize.Y
-				local w = self.SelectBtn.AbsoluteSize.X
+				local sbSize = self.SelectBtn.AbsoluteSize
+				local w = sbSize.X
 				self.Panel.Size = UDim2.fromOffset(w, panelH)
-				self.Panel.Position = UDim2.fromOffset(relX, relY)
-				self.Panel.Parent = self._menu._popupLayer
+				self.Panel.Position = UDim2.fromOffset(absPos.X, absPos.Y + sbSize.Y)
+				-- force CanvasSize
+				local totalH = itemCount * itemH + (itemCount - 1) * 2
+				self.Panel.CanvasSize = UDim2.fromOffset(0, totalH + 4)
 				self.Panel.Visible = true
 			else
 				self.Panel.Visible = false
@@ -900,7 +900,7 @@ return (function()
 		self.MaxSize = options.MaxSize or Vector2.new(850, 560)
 		self.Resizable = options.Resizable or false
 
-		local size = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(610, 330)
+		local size = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(592, 340)
 		local pos = options.Position or UDim2.new(0.5, -size.X / 2, 0.5, -size.Y / 2)
 
 		self.Gui = U.Create("ScreenGui", {
@@ -1207,13 +1207,18 @@ return (function()
 
 	function Menu:SelectTab(tab)
 		if self.ActiveTab == tab then return end
+		local ts = game:GetService("TweenService")
+		local ti = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		if self.ActiveTab then
-			self.ActiveTab.Container.Visible = false
-			self.ActiveTab.TabButton.BackgroundTransparency = 1
-			local lbl = self.ActiveTab.TabButton:FindFirstChild("Label")
+			local old = self.ActiveTab
+			old.Container.Visible = false
+			old.TabButton.BackgroundTransparency = 1
+			local lbl = old.TabButton:FindFirstChild("Label")
 			if lbl then lbl.TextColor3 = self.Theme.SidebarText end
-			local bar = self.ActiveTab.TabButton:FindFirstChild("ActiveBar")
-			if bar then bar.BackgroundTransparency = 1 end
+			local bar = old.TabButton:FindFirstChild("ActiveBar")
+			if bar then
+				ts:Create(bar, ti, { BackgroundTransparency = 1 }):Play()
+			end
 		end
 		self.ActiveTab = tab
 		if tab then
@@ -1223,7 +1228,10 @@ return (function()
 			local lbl = tab.TabButton:FindFirstChild("Label")
 			if lbl then lbl.TextColor3 = self.Theme.SidebarTextActive end
 			local bar = tab.TabButton:FindFirstChild("ActiveBar")
-			if bar then bar.BackgroundTransparency = 0 end
+			if bar then
+				bar.BackgroundTransparency = 0
+				ts:Create(bar, ti, { Size = UDim2.new(0, 3, 0, 18) }):Play()
+			end
 		end
 	end
 
@@ -1404,7 +1412,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.2.5", Theme = Theme }
+	local FyyUI = { Version = "0.2.6", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
