@@ -370,14 +370,7 @@ return (function()
 	function Slider:_updateKnobPos()
 		local pct = (self.Max ~= self.Min) and (self.Value - self.Min) / (self.Max - self.Min) or 0
 		pct = math.clamp(pct, 0, 1)
-		local ks = 14
-		local trackW = self.Track.AbsoluteSize.X
-		if trackW > 0 then
-			local x = pct * trackW - ks / 2
-			self.Knob.Position = UDim2.fromOffset(x, -4)
-		else
-			self.Knob.Position = UDim2.fromOffset(-ks / 2, -4)
-		end
+		self.Knob.Position = UDim2.new(pct, -7, 0.5, -7)
 	end
 
 	function Slider:SetValue(v, noCallback)
@@ -387,11 +380,7 @@ return (function()
 		local pct = (self.Max ~= self.Min) and (v - self.Min) / (self.Max - self.Min) or 0
 		pct = math.clamp(pct, 0, 1)
 		self.Fill.Size = UDim2.new(pct, 0, 1, 0)
-		local ks = 14
-		local trackW = self.Track.AbsoluteSize.X
-		if trackW > 0 then
-			self.Knob.Position = UDim2.fromOffset(pct * trackW - ks / 2, -4)
-		end
+		self.Knob.Position = UDim2.new(pct, -7, 0.5, -7)
 		self.ValueLabel.Text = tostring(v) .. self.Suffix
 		if not noCallback then
 			task.spawn(function() self.Callback(v) end)
@@ -405,8 +394,9 @@ return (function()
 	local Dropdown = {}
 	Dropdown.__index = Dropdown
 
-	function Dropdown.new(parent, options, theme)
+	function Dropdown.new(parent, options, theme, menuRef)
 		local self = setmetatable({}, Dropdown)
+		self._menu = menuRef
 		self.Text = options.Text or "Dropdown"
 		self.Description = options.Description
 		self.Options = options.Options or {}
@@ -535,7 +525,19 @@ return (function()
 
 		self.SelectBtn.MouseButton1Click:Connect(function()
 			self.Open = not self.Open
-			self.Panel.Visible = self.Open
+			if self.Open then
+				local absPos = self.SelectBtn.AbsolutePosition
+				local frameAbs = self._menu.Frame.AbsolutePosition
+				local relX = absPos.X - frameAbs.X
+				local relY = absPos.Y - frameAbs.Y + self.SelectBtn.AbsoluteSize.Y
+				local w = self.SelectBtn.AbsoluteSize.X
+				self.Panel.Size = UDim2.fromOffset(w, panelH)
+				self.Panel.Position = UDim2.fromOffset(relX, relY)
+				self.Panel.Parent = self._menu._popupLayer
+				self.Panel.Visible = true
+			else
+				self.Panel.Visible = false
+			end
 		end)
 
 		if self.HasDesc then
@@ -607,6 +609,16 @@ return (function()
 			Parent = menu.SidebarList,
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.Button })
+		self._activeBar = U.Create("Frame", {
+			Name = "ActiveBar",
+			Size = UDim2.fromOffset(3, 18),
+			Position = UDim2.new(0, 2, 0.5, -9),
+			BackgroundTransparency = 1,
+			BackgroundColor3 = theme.Accent,
+			BorderSizePixel = 0,
+			Parent = self.Button,
+		})
+		U.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = self._activeBar })
 		U.Create("TextLabel", {
 			Name = "Label",
 			Size = UDim2.new(1, -14, 1, 0),
@@ -617,6 +629,15 @@ return (function()
 			TextSize = theme.FontSize,
 			TextColor3 = theme.SidebarText,
 			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = self.Button,
+		})
+		U.Create("Frame", {
+			Name = "Line",
+			Size = UDim2.new(1, -16, 0, 1),
+			Position = UDim2.new(0, 8, 1, -1),
+			BackgroundColor3 = theme.Border,
+			BackgroundTransparency = 0.5,
+			BorderSizePixel = 0,
 			Parent = self.Button,
 		})
 
@@ -824,7 +845,7 @@ return (function()
 	end
 
 	function Tab:Dropdown(options)
-		local dd = Dropdown.new(self.Container, options, self.Theme)
+		local dd = Dropdown.new(self.Container, options, self.Theme, self.Menu)
 		table.insert(self.Components, dd)
 		return dd
 	end
@@ -1099,6 +1120,26 @@ return (function()
 			Parent = self.Frame,
 		})
 
+		-- Popup layer for dropdowns (above everything)
+		self._popupLayer = U.Create("Frame", {
+			Name = "PopupLayer",
+			Size = UDim2.new(1, 0, 1, 0),
+			BackgroundTransparency = 1,
+			ZIndex = 100,
+			Parent = self.Frame,
+		})
+
+		-- Separator line between sidebar and content
+		U.Create("Frame", {
+			Name = "SidebarLine",
+			Size = UDim2.new(0, 1, 1, -(theme.TopbarHeight + 10)),
+			Position = UDim2.new(0, sbw + 4, 0, theme.TopbarHeight + 6),
+			BackgroundColor3 = theme.Border,
+			BorderSizePixel = 0,
+			ZIndex = 1,
+			Parent = self.Frame,
+		})
+
 		-- Notification container
 		self.NotifBox = U.Create("Frame", {
 			Name = "Notifications",
@@ -1134,6 +1175,8 @@ return (function()
 			self.ActiveTab.Button.BackgroundTransparency = 1
 			local lbl = self.ActiveTab.Button:FindFirstChild("Label")
 			if lbl then lbl.TextColor3 = self.Theme.SidebarText end
+			local bar = self.ActiveTab.Button:FindFirstChild("ActiveBar")
+			if bar then bar.BackgroundTransparency = 1 end
 		end
 		self.ActiveTab = tab
 		if tab then
@@ -1142,6 +1185,8 @@ return (function()
 			tab.Button.BackgroundColor3 = self.Theme.TabActive
 			local lbl = tab.Button:FindFirstChild("Label")
 			if lbl then lbl.TextColor3 = self.Theme.SidebarTextActive end
+			local bar = tab.Button:FindFirstChild("ActiveBar")
+			if bar then bar.BackgroundTransparency = 0 end
 		end
 	end
 
