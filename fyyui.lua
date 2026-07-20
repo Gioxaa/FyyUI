@@ -1,33 +1,32 @@
 --[[
 	FyyUI v0.1.0
 	Roblox UI Library
-	@github fyyhub/FyyUI
+	@github FyyWannaFly/FyyUI
 	
-	local FyyUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/fyyhub/FyyUI/main/fyyui.lua"))()
+	local FyyUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FyyWannaFly/FyyUI/main/fyyui.lua"))()
 	local menu = FyyUI.Menu({ Title = "Hub" })
-	menu:Toggle({ Text = "Auto Farm", Description = "Farms resources automatically", Callback = function(v) end })
+	menu:Toggle({ Text = "Auto Farm", Callback = function(v) end })
 ]]
 
 return (function()
 	local Theme = {
 		Dark = {
-			Background = Color3.fromRGB(20, 20, 25),
-			Topbar = Color3.fromRGB(28, 28, 34),
-			TopbarBorder = Color3.fromRGB(40, 40, 48),
-			Accent = Color3.fromRGB(0, 140, 255),
-			AccentSecondary = Color3.fromRGB(100, 60, 255),
-			TextPrimary = Color3.fromRGB(230, 230, 240),
-			TextSecondary = Color3.fromRGB(150, 150, 165),
-			TextMuted = Color3.fromRGB(100, 100, 115),
-			Element = Color3.fromRGB(38, 38, 46),
-			ElementHover = Color3.fromRGB(48, 48, 56),
-			ElementBorder = Color3.fromRGB(50, 50, 60),
-			ElementSelected = Color3.fromRGB(0, 120, 230),
-			ToggleOn = Color3.fromRGB(0, 190, 90),
-			ToggleOff = Color3.fromRGB(58, 58, 68),
-			ToggleKnob = Color3.fromRGB(215, 215, 225),
-			Border = Color3.fromRGB(45, 45, 55),
-			ScrollBar = Color3.fromRGB(70, 70, 85),
+			Background = Color3.fromRGB(18, 18, 22),
+			Topbar = Color3.fromRGB(24, 24, 30),
+			TopbarBorder = Color3.fromRGB(38, 38, 46),
+			Accent = Color3.fromRGB(0, 130, 250),
+			AccentLine = Color3.fromRGB(0, 150, 255),
+			TextPrimary = Color3.fromRGB(225, 225, 235),
+			TextSecondary = Color3.fromRGB(145, 145, 160),
+			TextMuted = Color3.fromRGB(95, 95, 110),
+			Element = Color3.fromRGB(35, 35, 42),
+			ElementHover = Color3.fromRGB(45, 45, 54),
+			ElementBorder = Color3.fromRGB(48, 48, 56),
+			ToggleOn = Color3.fromRGB(0, 180, 80),
+			ToggleOff = Color3.fromRGB(55, 55, 65),
+			ToggleKnob = Color3.fromRGB(210, 210, 220),
+			Border = Color3.fromRGB(40, 40, 48),
+			ScrollBar = Color3.fromRGB(65, 65, 78),
 			Font = Enum.Font.SourceSans,
 			FontBold = Enum.Font.SourceSansBold,
 			FontSize = 15,
@@ -35,29 +34,28 @@ return (function()
 			FontSizeSmall = 13,
 			Padding = 10,
 			CornerRadius = 8,
-			TopbarHeight = 42,
+			TopbarHeight = 44,
 			ElementHeight = 34,
-			DescHeight = 50,
-			Spacing = 4,
+			DescHeight = 52,
+			Spacing = 6,
 		},
 		Light = {
-			Background = Color3.fromRGB(245, 245, 250),
-			Topbar = Color3.fromRGB(235, 235, 242),
-			TopbarBorder = Color3.fromRGB(220, 220, 230),
-			Accent = Color3.fromRGB(0, 120, 240),
-			AccentSecondary = Color3.fromRGB(80, 50, 230),
-			TextPrimary = Color3.fromRGB(30, 30, 40),
-			TextSecondary = Color3.fromRGB(100, 100, 115),
-			TextMuted = Color3.fromRGB(150, 150, 165),
-			Element = Color3.fromRGB(225, 225, 234),
-			ElementHover = Color3.fromRGB(215, 215, 226),
-			ElementBorder = Color3.fromRGB(210, 210, 220),
-			ElementSelected = Color3.fromRGB(0, 110, 225),
-			ToggleOn = Color3.fromRGB(0, 175, 80),
-			ToggleOff = Color3.fromRGB(180, 180, 192),
-			ToggleKnob = Color3.fromRGB(245, 245, 250),
-			Border = Color3.fromRGB(210, 210, 222),
-			ScrollBar = Color3.fromRGB(180, 180, 195),
+			Background = Color3.fromRGB(242, 242, 247),
+			Topbar = Color3.fromRGB(232, 232, 240),
+			TopbarBorder = Color3.fromRGB(218, 218, 228),
+			Accent = Color3.fromRGB(0, 115, 235),
+			AccentLine = Color3.fromRGB(0, 130, 245),
+			TextPrimary = Color3.fromRGB(28, 28, 36),
+			TextSecondary = Color3.fromRGB(98, 98, 112),
+			TextMuted = Color3.fromRGB(148, 148, 162),
+			Element = Color3.fromRGB(222, 222, 232),
+			ElementHover = Color3.fromRGB(212, 212, 224),
+			ElementBorder = Color3.fromRGB(208, 208, 218),
+			ToggleOn = Color3.fromRGB(0, 165, 75),
+			ToggleOff = Color3.fromRGB(178, 178, 190),
+			ToggleKnob = Color3.fromRGB(242, 242, 248),
+			Border = Color3.fromRGB(208, 208, 220),
+			ScrollBar = Color3.fromRGB(178, 178, 192),
 			Font = Enum.Font.SourceSans,
 			FontBold = Enum.Font.SourceSansBold,
 			FontSize = 15,
@@ -65,51 +63,29 @@ return (function()
 			FontSizeSmall = 13,
 			Padding = 10,
 			CornerRadius = 8,
-			TopbarHeight = 42,
+			TopbarHeight = 44,
 			ElementHeight = 34,
-			DescHeight = 50,
-			Spacing = 4,
+			DescHeight = 52,
+			Spacing = 6,
 		},
 	}
 
 	function Theme:Override(base, overrides)
 		base = type(base) == "string" and self[base] or base
 		if not base then base = self.Dark end
-		local merged = {}
-		for k, v in pairs(base) do merged[k] = v end
-		for k, v in pairs(overrides or {}) do merged[k] = v end
-		return merged
+		local m = {}
+		for k, v in pairs(base) do m[k] = v end
+		for k, v in pairs(overrides or {}) do m[k] = v end
+		return m
 	end
 
 	local U = {}
 
-	function U.Create(className, properties, children)
-		local inst = Instance.new(className)
-		if properties then
-			for k, v in pairs(properties) do
-				inst[k] = v
-			end
-		end
-		if children then
-			for _, child in ipairs(children) do
-				child.Parent = inst
-			end
-		end
+	function U.Create(c, props, children)
+		local inst = Instance.new(c)
+		if props then for k, v in pairs(props) do inst[k] = v end end
+		if children then for _, ch in ipairs(children) do ch.Parent = inst end end
 		return inst
-	end
-
-	function U.Shadow(parent, transparency)
-		return U.Create("ImageLabel", {
-			Name = "Shadow",
-			Size = UDim2.new(1, 8, 1, 8),
-			Position = UDim2.fromOffset(-4, -4),
-			BackgroundTransparency = 1,
-			Image = "rbxassetid://6015897843",
-			ImageTransparency = transparency or 0.55,
-			ScaleType = Enum.ScaleType.Slice,
-			SliceCenter = Rect.new(10, 10, 118, 118),
-			Parent = parent,
-		})
 	end
 
 	local Toggle = {}
@@ -135,8 +111,8 @@ return (function()
 
 		self.Label = U.Create("TextLabel", {
 			Name = "Label",
-			Size = UDim2.new(1, -60, 0, 20),
-			Position = UDim2.fromOffset(0, self.HasDesc and 2 or (h - 20) / 2),
+			Size = UDim2.new(1, -58, 0, 20),
+			Position = UDim2.fromOffset(0, self.HasDesc and 2 or (h - 20) / 2 + 1),
 			BackgroundTransparency = 1,
 			Text = self.Text,
 			Font = theme.Font,
@@ -148,9 +124,9 @@ return (function()
 		})
 
 		if self.HasDesc then
-			self.DescLabel = U.Create("TextLabel", {
+			U.Create("TextLabel", {
 				Name = "Description",
-				Size = UDim2.new(1, -60, 0, 16),
+				Size = UDim2.new(1, -58, 0, 16),
 				Position = UDim2.fromOffset(0, 24),
 				BackgroundTransparency = 1,
 				Text = self.Description,
@@ -166,7 +142,7 @@ return (function()
 		self.Track = U.Create("ImageButton", {
 			Name = "Track",
 			Size = UDim2.fromOffset(46, 24),
-			Position = UDim2.new(1, -54, 0.5, -12),
+			Position = UDim2.new(1, -52, 0.5, -12),
 			BackgroundColor3 = self.Value and theme.ToggleOn or theme.ToggleOff,
 			AutoButtonColor = false,
 			Parent = self.Container,
@@ -206,15 +182,16 @@ return (function()
 		else
 			self:_animate(value)
 		end
-		self.Callback(value)
+		spawn(function() self.Callback(value) end)
 	end
 
 	function Toggle:GetValue() return self.Value end
 
 	function Toggle:SetEnabled(enabled)
 		self.Enabled = enabled
-		self.Track.BackgroundTransparency = enabled and 0 or 0.5
-		self.Knob.BackgroundTransparency = enabled and 0 or 0.5
+		local t = enabled and 0 or 0.5
+		self.Track.BackgroundTransparency = t
+		self.Knob.BackgroundTransparency = t
 	end
 
 	function Toggle:SetText(text)
@@ -224,8 +201,8 @@ return (function()
 
 	function Toggle:SetDescription(desc)
 		self.Description = desc
-		if self.DescLabel then
-			self.DescLabel.Text = desc or ""
+		if self.Container:FindFirstChild("Description") then
+			self.Container.Description.Text = desc or ""
 		end
 	end
 
@@ -252,7 +229,6 @@ return (function()
 			IgnoreGuiInset = true,
 			Enabled = self.Visible,
 		})
-		U.Shadow(self.Gui, 0.55)
 
 		self.Frame = U.Create("Frame", {
 			Name = "Main",
@@ -260,10 +236,25 @@ return (function()
 			Position = pos,
 			BackgroundColor3 = theme.Background,
 			BorderSizePixel = 0,
-			ClipsDescendants = true,
 			Parent = self.Gui,
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(0, theme.CornerRadius), Parent = self.Frame })
+
+		local shadow = U.Create("ImageLabel", {
+			Name = "Shadow",
+			Size = UDim2.fromOffset(size.X + 12, size.Y + 12),
+			Position = UDim2.fromOffset(-6, -6),
+			BackgroundTransparency = 1,
+			Image = "rbxassetid://6015897843",
+			ImageTransparency = 0.6,
+			ScaleType = Enum.ScaleType.Slice,
+			SliceCenter = Rect.new(10, 10, 118, 118),
+			ZIndex = -1,
+		})
+		spawn(function()
+			task.wait()
+			shadow.Parent = self.Gui
+		end)
 
 		self.Topbar = U.Create("Frame", {
 			Name = "Topbar",
@@ -273,8 +264,9 @@ return (function()
 			Parent = self.Frame,
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(0, theme.CornerRadius), Parent = self.Topbar })
+
 		U.Create("Frame", {
-			Name = "TopbarFill",
+			Name = "Fill",
 			Size = UDim2.new(1, 0, 0, theme.CornerRadius),
 			Position = UDim2.new(0, 0, 1, -theme.CornerRadius),
 			BackgroundColor3 = theme.Topbar,
@@ -282,10 +274,10 @@ return (function()
 			Parent = self.Topbar,
 		})
 		U.Create("Frame", {
-			Name = "TopbarBorder",
-			Size = UDim2.new(1, -16, 0, 1),
-			Position = UDim2.new(0, 8, 1, 0),
-			BackgroundColor3 = theme.TopbarBorder,
+			Name = "AccentLine",
+			Size = UDim2.new(1, -20, 0, 2),
+			Position = UDim2.new(0, 10, 1, 0),
+			BackgroundColor3 = theme.AccentLine,
 			BorderSizePixel = 0,
 			Parent = self.Topbar,
 		})
@@ -307,53 +299,62 @@ return (function()
 			Name = "Close",
 			Size = UDim2.fromOffset(26, 26),
 			Position = UDim2.new(1, -36, 0.5, -13),
-			BackgroundColor3 = Color3.fromRGB(55, 55, 65),
+			BackgroundColor3 = Color3.fromRGB(50, 50, 60),
+			BackgroundTransparency = 1,
 			AutoButtonColor = false,
 			Parent = self.Topbar,
 		})
+		self.CloseBtn.MouseEnter:Connect(function() self.CloseBtn.BackgroundTransparency = 0 end)
+		self.CloseBtn.MouseLeave:Connect(function() self.CloseBtn.BackgroundTransparency = 1 end)
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.CloseBtn })
 		U.Create("TextLabel", {
-			Name = "CloseIcon",
+			Name = "Icon",
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
 			BackgroundTransparency = 1,
 			Text = "\215",
 			Font = theme.FontBold,
 			TextSize = 18,
-			TextColor3 = Color3.fromRGB(180, 180, 190),
+			TextColor3 = Color3.fromRGB(170, 170, 185),
 			Parent = self.CloseBtn,
 		})
 
 		self.Container = U.Create("ScrollingFrame", {
 			Name = "Container",
 			Size = UDim2.new(1, -theme.Padding * 2, 1, -(theme.TopbarHeight + theme.Padding + 4)),
-			Position = UDim2.fromOffset(theme.Padding, theme.TopbarHeight + theme.Padding + 2),
+			Position = UDim2.fromOffset(theme.Padding, theme.TopbarHeight + theme.Padding + 4),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			ScrollBarThickness = 3,
 			ScrollBarImageColor3 = theme.ScrollBar,
+			ScrollBarImageTransparency = 0.4,
 			CanvasSize = UDim2.new(0, 0, 0, 0),
 			AutomaticCanvasSize = Enum.AutomaticSize.Y,
 			ScrollingDirection = Enum.ScrollingDirection.Y,
 			Parent = self.Frame,
 		})
 
+		U.Create("UIListLayout", {
+			Padding = UDim.new(0, theme.Spacing),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Parent = self.Container,
+		})
+
 		self:_dragging()
 		self.CloseBtn.MouseButton1Click:Connect(function() self:SetVisible(false) end)
 
-		local parentInst = options.Parent or game:GetService("CoreGui")
-		self.Gui.Parent = parentInst
-
+		self.Gui.Parent = options.Parent or game:GetService("CoreGui")
 		return self
 	end
 
 	function Menu:_dragging()
 		local topbar = self.Topbar
 		local frame = self.Frame
-		local dragging, dragStart, startPos = false
+		local dragging, dragStart, startPos
 
 		topbar.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			local t = input.UserInputType
+			if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch then
 				dragging = true
 				dragStart = input.Position
 				startPos = frame.Position
@@ -362,11 +363,21 @@ return (function()
 		topbar.InputChanged:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
 				local delta = input.Position - dragStart
-				frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+				frame.Position = UDim2.new(
+					startPos.X.Scale, startPos.X.Offset + delta.X,
+					startPos.Y.Scale, startPos.Y.Offset + delta.Y
+				)
+				if shadow then
+					shadow.Position = UDim2.new(
+						startPos.X.Scale, startPos.X.Offset + delta.X - 6,
+						startPos.Y.Scale, startPos.Y.Offset + delta.Y - 6
+					)
+				end
 			end
 		end)
 		topbar.InputEnded:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			local t = input.UserInputType
+			if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch then
 				dragging = false
 			end
 		end)
@@ -388,17 +399,14 @@ return (function()
 
 		btn.Container = U.Create("Frame", {
 			Name = "ButtonContainer",
-			Size = UDim2.new(1, 0, 0, h + 4),
+			Size = UDim2.new(1, 0, 0, h + 2),
 			BackgroundTransparency = 1,
 			Parent = self.Container,
 		})
 
-		local padTop = hasDesc and 4 or (h - theme.ElementHeight) / 2 + 2
-
 		btn.Button = U.Create("ImageButton", {
 			Name = "Button",
 			Size = UDim2.new(1, 0, 0, h),
-			Position = UDim2.fromOffset(0, padTop),
 			BackgroundColor3 = theme.Element,
 			AutoButtonColor = false,
 			Parent = btn.Container,
@@ -409,7 +417,7 @@ return (function()
 			U.Create("TextLabel", {
 				Name = "Text",
 				Size = UDim2.new(1, -16, 0, 20),
-				Position = UDim2.fromOffset(8, 4),
+				Position = UDim2.fromOffset(10, 5),
 				BackgroundTransparency = 1,
 				Text = options.Text or "Button",
 				Font = theme.Font,
@@ -421,7 +429,7 @@ return (function()
 			U.Create("TextLabel", {
 				Name = "Description",
 				Size = UDim2.new(1, -16, 0, 16),
-				Position = UDim2.fromOffset(8, 26),
+				Position = UDim2.fromOffset(10, 27),
 				BackgroundTransparency = 1,
 				Text = options.Description,
 				Font = theme.Font,
@@ -444,13 +452,20 @@ return (function()
 			})
 		end
 
-		btn.Button.MouseEnter:Connect(function() btn.Button.BackgroundColor3 = theme.ElementHover end)
-		btn.Button.MouseLeave:Connect(function() btn.Button.BackgroundColor3 = theme.Element end)
+		btn.Button.MouseEnter:Connect(function()
+			btn.Button.BackgroundColor3 = theme.ElementHover
+		end)
+		btn.Button.MouseLeave:Connect(function()
+			btn.Button.BackgroundColor3 = theme.Element
+		end)
 		btn.Button.MouseButton1Click:Connect(function()
 			if options.Callback then options.Callback() end
 		end)
 
-		btn.SetText = function(text) btn.Button.TextLabel.Text = text end
+		btn.SetText = function(text)
+			local t = btn.Button:FindFirstChild("Text")
+			if t then t.Text = text end
+		end
 		btn.SetCallback = function(cb) options.Callback = cb end
 		btn.Destroy = function() if btn.Container then btn.Container:Destroy() end end
 
@@ -474,7 +489,7 @@ return (function()
 		lbl.TextLabel = U.Create("TextLabel", {
 			Name = "Text",
 			Size = UDim2.new(1, 0, 0, hasDesc and 20 or h),
-			Position = UDim2.fromOffset(0, hasDesc and 2 or 0),
+			Position = UDim2.fromOffset(0, hasDesc and 2 or (h - 20) / 2 + 1),
 			BackgroundTransparency = 1,
 			Text = options.Text or "",
 			Font = self.Theme.Font,
@@ -486,7 +501,7 @@ return (function()
 		})
 
 		if hasDesc then
-			lbl.DescLabel = U.Create("TextLabel", {
+			U.Create("TextLabel", {
 				Name = "Description",
 				Size = UDim2.new(1, 0, 0, 16),
 				Position = UDim2.fromOffset(0, 24),
@@ -502,10 +517,7 @@ return (function()
 		end
 
 		lbl.SetText = function(text) lbl.TextLabel.Text = text end
-		lbl.SetColor = function(color) lbl.TextLabel.TextColor3 = color end
-		if lbl.DescLabel then
-			lbl.SetDescription = function(desc) lbl.DescLabel.Text = desc end
-		end
+		lbl.SetColor = function(c) lbl.TextLabel.TextColor3 = c end
 		lbl.Destroy = function() if lbl.Container then lbl.Container:Destroy() end end
 
 		table.insert(self.Components, lbl)
@@ -516,7 +528,7 @@ return (function()
 		local div = {}
 		div.Container = U.Create("Frame", {
 			Name = "Divider",
-			Size = UDim2.new(1, 0, 0, 12),
+			Size = UDim2.new(1, 0, 0, 14),
 			BackgroundTransparency = 1,
 			Parent = self.Container,
 		})
@@ -533,36 +545,31 @@ return (function()
 		return div
 	end
 
-	function Menu:SetVisible(visible)
-		self.Visible = visible
-		if self.Gui then self.Gui.Enabled = visible end
+	function Menu:SetVisible(v)
+		self.Visible = v
+		if self.Gui then self.Gui.Enabled = v end
 	end
 
 	function Menu:ToggleVisibility() self:SetVisible(not self.Visible) end
 	function Menu:GetVisible() return self.Visible end
-	function Menu:SetTitle(title) self.Title.Text = title end
+	function Menu:SetTitle(t) self.Title.Text = t end
 
 	function Menu:Destroy()
-		for _, comp in ipairs(self.Components) do
-			if comp.Destroy then comp:Destroy() end
+		for _, c in ipairs(self.Components) do
+			if c.Destroy then c:Destroy() end
 		end
 		self.Components = {}
 		if self.Gui then self.Gui:Destroy() end
 	end
 
-	local FyyUI = {
-		Version = "0.1.0",
-		Theme = Theme,
-	}
+	local FyyUI = { Version = "0.1.0", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
-		local themeName = options.Theme or "Dark"
-		local theme = type(themeName) == "string" and Theme[themeName] or themeName
+		local name = options.Theme or "Dark"
+		local theme = type(name) == "string" and Theme[name] or name
 		if not theme then theme = Theme.Dark end
-		if options.ColorOverride then
-			theme = Theme:Override(theme, options.ColorOverride)
-		end
+		if options.ColorOverride then theme = Theme:Override(theme, options.ColorOverride) end
 		return Menu.new(options, theme)
 	end
 
