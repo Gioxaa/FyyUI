@@ -1231,34 +1231,33 @@ return (function()
 			Parent = self.Topbar,
 		})
 
-		-- MS / FPS display (right side of TitleSep)
-		self.StatusLabel = U.Create("TextLabel", {
-			Name = "Status",
-			Size = UDim2.fromOffset(120, 20),
-			Position = UDim2.new(1, -160, 0.5, -10),
-			BackgroundTransparency = 1,
-			Text = "",
-			Font = theme.Font,
-			TextSize = theme.FontSizeSmall,
-			TextColor3 = theme.TextMuted,
-			TextXAlignment = Enum.TextXAlignment.Right,
-			Parent = self.Topbar,
-		})
-		local stats = game:GetService("Stats")
-		local networkStats = stats.Network
-		local function updateStats()
-			if not self.StatusLabel then return end
-			local fps = math.floor(stats.FPS)
-			local ping = 0
-			local success, val = pcall(function()
-				return networkStats.ServerStatsItem["Data Ping"]:GetValue()
+		-- MS / FPS display (right side of TitleSep) — enabled via options.Stats = true
+		if options.Stats then
+			self.StatusLabel = U.Create("TextLabel", {
+				Name = "Status",
+				Size = UDim2.fromOffset(120, 20),
+				Position = UDim2.new(1, -160, 0.5, -10),
+				BackgroundTransparency = 1,
+				Text = "",
+				Font = theme.Font,
+				TextSize = theme.FontSizeSmall,
+				TextColor3 = theme.TextMuted,
+				TextXAlignment = Enum.TextXAlignment.Right,
+				Parent = self.Topbar,
+			})
+			local stats = game:GetService("Stats")
+			local networkStats = stats.Network
+			self._heartbeatCon = game:GetService("RunService").Heartbeat:Connect(function()
+				if not self.StatusLabel then return end
+				local fps = math.floor(stats.FPS)
+				local ping = 0
+				local success, val = pcall(function()
+					return networkStats.ServerStatsItem["Data Ping"]:GetValue()
+				end)
+				if success then ping = math.floor(val) end
+				self.StatusLabel.Text = fps .. " FPS  •  " .. ping .. " MS"
 			end)
-			if success then ping = math.floor(val) end
-			self.StatusLabel.Text = fps .. " FPS  •  " .. ping .. " MS"
 		end
-		self._heartbeatCon = game:GetService("RunService").Heartbeat:Connect(function()
-			updateStats()
-		end)
 
 		-- Accent line under topbar
 		self.AccentLine = U.Create("Frame", {
@@ -1346,8 +1345,8 @@ return (function()
 			Name = "SidebarLine",
 			Size = UDim2.new(0, 1, 1, -(theme.TopbarHeight + 10)),
 			Position = UDim2.new(0, sbw + 4, 0, theme.TopbarHeight + 6),
-			BackgroundColor3 = Color3.fromRGB(120, 80, 200),
-			BackgroundTransparency = 0.3,
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundTransparency = 0.5,
 			BorderSizePixel = 0,
 			ZIndex = 1,
 			Parent = self.Frame,
@@ -1759,7 +1758,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.8.5", Theme = Theme }
+	local FyyUI = { Version = "0.8.6", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
