@@ -1280,11 +1280,15 @@ return (function()
 			tab.Container.Visible = true
 			ts:Create(tab.Container, ti, { Position = UDim2.fromOffset(6, 3) }):Play()
 
-			-- Shared ActiveBar slides to this tab's position
-			local btnY = tab.TabButton.Position.Y.Offset
+			-- Shared ActiveBar slides to this tab's position (calculated from index, not layout)
 			if self.ActiveBar then
+				local tabIdx = 0
+				for i, t in ipairs(self.Tabs) do
+					if t == tab then tabIdx = i; break end
+				end
+				local targetY = (tabIdx - 1) * 36 + 8 -- (34 height + 2 padding) + bar center offset
 				self.ActiveBar.BackgroundTransparency = 0
-				ts:Create(self.ActiveBar, ti, { Position = UDim2.fromOffset(5, btnY + 8) }):Play()
+				ts:Create(self.ActiveBar, ti, { Position = UDim2.fromOffset(5, targetY) }):Play()
 			end
 
 			-- Tab button visual
