@@ -527,30 +527,14 @@ return (function()
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = self.Container })
 		U.Create("UIStroke", { Color = theme.ElementBorder, Transparency = 0.6, Thickness = 1, Parent = self.Container })
 
-		-- Accent line separator — runs from below the title to the bottom (kayak "TITLE |")
-		local lineY = 28
-		local lineH = h + 8 - lineY - 8
-		if lineH > 0 then
-			local accentLine = U.Create("Frame", {
-				Name = "AccentLine",
-				Size = UDim2.fromOffset(2, lineH),
-				Position = UDim2.fromOffset(12, lineY),
-				BackgroundColor3 = theme.Accent,
-				BackgroundTransparency = 0.5,
-				BorderSizePixel = 0,
-				Parent = self.Container,
-			})
-			U.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = accentLine })
-		end
-
 		U.Create("TextLabel", {
 			Name = "Label",
 			Size = UDim2.new(1, -70, 0, 20),
 			Position = UDim2.fromOffset(12, 6),
 			BackgroundTransparency = 1,
 			Text = self.Text,
-			Font = theme.FontBold,
-			TextSize = theme.FontSizeTitle,
+			Font = theme.Font,
+			TextSize = theme.FontSize,
 			TextColor3 = theme.TextPrimary,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			RichText = true,
@@ -1221,10 +1205,26 @@ return (function()
 		end
 
 		-- Title
+		-- Title vertical separator | nyambung ke AccentLine
+		local titleText = options.Title or "FyyUI"
+		local textBounds = game:GetService("TextService"):GetTextSize(
+			titleText, theme.FontSizeTitle, theme.FontBold, Vector2.new(1000, 1000)
+		)
+		local sepX = leftMargin + 3 + textBounds.X + 10
+		self.TitleSep = U.Create("Frame", {
+			Name = "TitleSep",
+			Size = UDim2.fromOffset(2, theme.TopbarHeight + 2),
+			Position = UDim2.fromOffset(sepX, 0),
+			BackgroundColor3 = theme.AccentLine,
+			BorderSizePixel = 0,
+			ZIndex = 1,
+			Parent = self.Topbar,
+		})
+
 		self.Title = U.Create("TextLabel", {
 			Name = "Title",
 			Size = UDim2.new(1, -(leftMargin + 50), 1, 0),
-			Position = UDim2.fromOffset(leftMargin, 0),
+			Position = UDim2.fromOffset(leftMargin + 3, 0),
 			BackgroundTransparency = 1,
 			Text = options.Title or "FyyUI",
 			Font = theme.FontBold,
@@ -1732,7 +1732,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.8.0", Theme = Theme }
+	local FyyUI = { Version = "0.8.1", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
