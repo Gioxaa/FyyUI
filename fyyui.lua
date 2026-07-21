@@ -669,7 +669,7 @@ return (function()
 
 		self.TabButton = U.Create("ImageButton", {
 			Name = "TabButton",
-			Size = UDim2.new(1, -6, 0, 34),
+			Size = UDim2.new(1, -6, 0, 38),
 			Position = UDim2.fromOffset(3, 0),
 			BackgroundTransparency = 1,
 			AutoButtonColor = false,
@@ -693,7 +693,7 @@ return (function()
 			U.Create("ImageLabel", {
 				Name = "Icon",
 				Size = UDim2.fromOffset(18, 18),
-				Position = UDim2.fromOffset(12, 8),
+				Position = UDim2.fromOffset(14, 10),
 				BackgroundTransparency = 1,
 				Image = iconProps.Image,
 				ImageRectSize = iconProps.ImageRectSize,
@@ -701,30 +701,20 @@ return (function()
 				Parent = self.TabButton,
 			})
 		end
-		local textX = iconProps and 38 or 16
-		local textW = iconProps and -42 or -20
+		local textX = iconProps and 40 or 18
+		local textW = iconProps and -44 or -22
 		U.Create("TextLabel", {
 			Name = "Label",
 			Size = UDim2.new(1, textW, 1, 0),
 			Position = UDim2.fromOffset(textX, 0),
 			BackgroundTransparency = 1,
 			Text = self.Text,
-			Font = theme.FontBold,
+			Font = theme.Font,
 			TextSize = theme.FontSize,
 			TextColor3 = theme.SidebarText,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Parent = self.TabButton,
 		})
-		U.Create("Frame", {
-			Name = "Line",
-			Size = UDim2.new(1, -16, 0, 1),
-			Position = UDim2.new(0, 8, 1, -1),
-			BackgroundColor3 = theme.Border,
-			BackgroundTransparency = 0.5,
-			BorderSizePixel = 0,
-			Parent = self.TabButton,
-		})
-
 		self.Container = U.Create("ScrollingFrame", {
 			Name = "TabContent",
 			Size = UDim2.new(1, -12, 1, -6),
@@ -1187,7 +1177,7 @@ return (function()
 				Position = UDim2.fromScale(0.5, 0.5),
 				BackgroundTransparency = 1,
 				Text = "X",
-				Font = theme.FontBold,
+			Font = theme.Font,
 				TextSize = 14,
 				TextColor3 = Color3.fromRGB(180, 180, 195),
 				Parent = self.CloseBtn,
@@ -1285,7 +1275,7 @@ return (function()
 			Size = UDim2.fromOffset(4, 20),
 			Position = UDim2.fromOffset(5, 0),
 			BackgroundTransparency = 1,
-			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundColor3 = theme.Accent,
 			BorderSizePixel = 0,
 			ZIndex = 2,
 			Parent = self.Sidebar,
@@ -1384,8 +1374,8 @@ return (function()
 				for i, t in ipairs(self.Tabs) do
 					if t == tab then tabIdx = i; break end
 				end
-				local targetY = (tabIdx - 1) * 36 + 7 -- (34 height + 2 padding) + bar center offset (34-20)/2
-				self.ActiveBar.BackgroundTransparency = 0.25
+				local targetY = (tabIdx - 1) * 40 + 9 -- (38 height + 2 padding) + bar center offset (38-20)/2
+				self.ActiveBar.BackgroundTransparency = 0
 				if hadPrevTab then
 					ts:Create(self.ActiveBar, ti, { Position = UDim2.fromOffset(5, targetY) }):Play()
 				else
@@ -1722,7 +1712,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.7.7", Theme = Theme }
+	local FyyUI = { Version = "0.7.8", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
