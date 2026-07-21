@@ -4,6 +4,7 @@ local menu = FyyUI.Menu({
 	Title = "FyyUI Hub",
 	Resizable = true,
 	HasOutline = true,
+	Theme = "Amoled",
 })
 
 -- Tab 1: Main

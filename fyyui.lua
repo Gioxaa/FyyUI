@@ -1346,6 +1346,12 @@ return (function()
 			self._popupUISCon = nil
 		end
 		if self._activePopupFrame then
+			local ts = game:GetService("TweenService")
+			local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			local curSize = self._activePopupFrame.Size
+			local tw = ts:Create(self._activePopupFrame, ti, { Size = UDim2.fromOffset(0, curSize.Y.Offset) })
+			tw:Play()
+			tw.Completed:Wait()
 			self._activePopupFrame:Destroy()
 			self._activePopupFrame = nil
 		end
@@ -1532,7 +1538,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.6.0", Theme = Theme }
+	local FyyUI = { Version = "0.6.1", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
