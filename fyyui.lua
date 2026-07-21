@@ -564,17 +564,26 @@ return (function()
 			Parent = self.SelectBtn,
 		})
 
-		U.Create("TextLabel", {
+		local _arrowProps = resolveIcon("chevron-right")
+		self._arrow = U.Create("ImageLabel", {
 			Name = "Arrow",
 			Size = UDim2.fromOffset(16, 16),
 			Position = UDim2.new(1, -20, 0.5, -8),
 			BackgroundTransparency = 1,
-			Text = "v",
-			Font = theme.FontBold,
-			TextSize = 14,
-			TextColor3 = theme.TextMuted,
+			Image = _arrowProps.Image,
+			ImageRectSize = _arrowProps.ImageRectSize,
+			ImageRectOffset = _arrowProps.ImageRectOffset,
 			Parent = self.SelectBtn,
 		})
+		local function updateArrow()
+			local props = resolveIcon(self.Open and "chevron-right" or "chevron-down")
+			if props then
+				self._arrow.Image = props.Image
+				self._arrow.ImageRectSize = props.ImageRectSize
+				self._arrow.ImageRectOffset = props.ImageRectOffset
+			end
+		end
+		self._updateArrow = updateArrow
 
 			-- Find selected index
 		local selectedIdx = 0
@@ -586,6 +595,7 @@ return (function()
 			if self._menu._activePopupFrame then
 				-- Popup is open → close it
 				self.Open = false
+				if self._updateArrow then self._updateArrow() end
 				if self._menu._activeDropdown == self then
 					self._menu._activeDropdown = nil
 				end
@@ -593,6 +603,7 @@ return (function()
 			else
 				-- Popup is closed → open it
 				self.Open = true
+				if self._updateArrow then self._updateArrow() end
 				-- Close any other open dropdown first
 				if self._menu._activeDropdown and self._menu._activeDropdown ~= self then
 					self._menu._activeDropdown.Open = false
@@ -805,6 +816,21 @@ return (function()
 				Image = btnIconProps.Image,
 				ImageRectSize = btnIconProps.ImageRectSize,
 				ImageRectOffset = btnIconProps.ImageRectOffset,
+				Parent = btn.Container,
+			})
+		end
+
+		-- Right-side icon (mouse-pointer-2)
+		local _pointerProps = resolveIcon("mouse-pointer-2")
+		if _pointerProps then
+			U.Create("ImageLabel", {
+				Name = "Pointer",
+				Size = UDim2.fromOffset(16, 16),
+				Position = UDim2.new(1, -22, 0.5, -8),
+				BackgroundTransparency = 1,
+				Image = _pointerProps.Image,
+				ImageRectSize = _pointerProps.ImageRectSize,
+				ImageRectOffset = _pointerProps.ImageRectOffset,
 				Parent = btn.Container,
 			})
 		end
@@ -1110,6 +1136,11 @@ return (function()
 			local btnSize = 12
 			local spacing = 6
 
+			local macIcons = {
+				Close = resolveIcon("x"),
+				Minimize = resolveIcon("minus"),
+				Maximize = resolveIcon("scan"),
+			}
 			local function macBtn(name, color, action)
 				local b = U.Create("ImageButton", {
 					Name = name,
@@ -1120,6 +1151,21 @@ return (function()
 					Parent = self.Topbar,
 				})
 				U.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = b })
+				local icon = macIcons[name]
+				if icon then
+					U.Create("ImageLabel", {
+						Name = "Icon",
+						Size = UDim2.fromOffset(8, 8),
+						Position = UDim2.fromScale(0.5, 0.5),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						BackgroundTransparency = 1,
+						Image = icon.Image,
+						ImageRectSize = icon.ImageRectSize,
+						ImageRectOffset = icon.ImageRectOffset,
+						ImageColor3 = Color3.fromRGB(60, 60, 72),
+						Parent = b,
+					})
+				end
 				b.MouseButton1Click:Connect(action)
 				rightMargin = rightMargin + btnSize + spacing
 				return b
@@ -1175,17 +1221,21 @@ return (function()
 				self.CloseBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 72)
 			end)
 			U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.CloseBtn })
-			U.Create("TextLabel", {
-				Name = "Icon",
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
-				BackgroundTransparency = 1,
-				Text = "X",
-			Font = theme.Font,
-				TextSize = 14,
-				TextColor3 = Color3.fromRGB(180, 180, 195),
-				Parent = self.CloseBtn,
-			})
+			local _xProps = resolveIcon("x")
+			if _xProps then
+				U.Create("ImageLabel", {
+					Name = "Icon",
+					Size = UDim2.fromOffset(14, 14),
+					Position = UDim2.fromScale(0.5, 0.5),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					BackgroundTransparency = 1,
+					ImageColor3 = Color3.fromRGB(180, 180, 195),
+					Image = _xProps.Image,
+					ImageRectSize = _xProps.ImageRectSize,
+					ImageRectOffset = _xProps.ImageRectOffset,
+					Parent = self.CloseBtn,
+				})
+			end
 			self.CloseBtn.MouseButton1Click:Connect(function() self:SetVisible(false) end)
 		end
 
@@ -1606,6 +1656,7 @@ return (function()
 		end
 		if self._activeDropdown then
 			self._activeDropdown.Open = false
+			if self._activeDropdown._updateArrow then self._activeDropdown._updateArrow() end
 			self._activeDropdown = nil
 		end
 	end
@@ -1788,7 +1839,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.3", Theme = Theme }
+	local FyyUI = { Version = "0.9.4", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
