@@ -1246,22 +1246,19 @@ return (function()
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Parent = self.Topbar,
 			})
+			local _frameCount = 0
+			local _lastTime = tick()
+			local _currentFps = 0
 			self._heartbeatCon = game:GetService("RunService").Heartbeat:Connect(function()
 				if not self.StatusLabel then return end
-				local text = "---"
-				local ok, s = pcall(function() return game:GetService("Stats") end)
-				if ok then
-					local fps = math.floor(s.FPS)
-					text = fps .. " FPS"
-					local ok2, pingItem = pcall(function()
-						return s.Network.ServerStatsItem["Data Ping"]
-					end)
-					if ok2 and pingItem then
-						local v = pingItem:GetValue()
-						text = text .. " • " .. math.floor(v) .. " MS"
-					end
+				_frameCount = _frameCount + 1
+				local now = tick()
+				if now - _lastTime >= 1 then
+					_currentFps = _frameCount
+					_frameCount = 0
+					_lastTime = now
 				end
-				self.StatusLabel.Text = text
+				self.StatusLabel.Text = _currentFps .. " FPS"
 			end)
 		end
 
@@ -1764,7 +1761,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.0", Theme = Theme }
+	local FyyUI = { Version = "0.9.1", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
