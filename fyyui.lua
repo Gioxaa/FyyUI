@@ -90,8 +90,8 @@ return (function()
 			Background = Color3.fromRGB(0, 0, 0),
 			Topbar = Color3.fromRGB(7, 7, 10),
 			TopbarBorder = Color3.fromRGB(18, 18, 26),
-			Accent = Color3.fromRGB(80, 140, 255),
-			AccentLine = Color3.fromRGB(90, 155, 255),
+			Accent = Color3.fromRGB(140, 80, 255),
+			AccentLine = Color3.fromRGB(140, 80, 255),
 			TextPrimary = Color3.fromRGB(210, 210, 220),
 			TextSecondary = Color3.fromRGB(130, 130, 145),
 			TextMuted = Color3.fromRGB(75, 75, 92),
@@ -99,7 +99,7 @@ return (function()
 			ElementHover = Color3.fromRGB(22, 22, 30),
 			ElementBorder = Color3.fromRGB(25, 25, 36),
 			Outline = Color3.fromRGB(16, 16, 24),
-			ToggleOn = Color3.fromRGB(50, 200, 110),
+			ToggleOn = Color3.fromRGB(140, 80, 255),
 			ToggleOff = Color3.fromRGB(22, 22, 32),
 			ToggleKnob = Color3.fromRGB(195, 195, 210),
 			Border = Color3.fromRGB(16, 16, 24),
@@ -685,12 +685,20 @@ return (function()
 			menu:SelectTab(self)
 		end)
 		self.TabButton.MouseEnter:Connect(function()
+			menu._hoveredTabCount = menu._hoveredTabCount + 1
+			if menu.SidebarLine then
+				menu.SidebarLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			end
 			if menu.ActiveTab ~= self then
 				self.TabButton.BackgroundTransparency = 0
 				self.TabButton.BackgroundColor3 = theme.TabHover
 			end
 		end)
 		self.TabButton.MouseLeave:Connect(function()
+			menu._hoveredTabCount = math.max(0, menu._hoveredTabCount - 1)
+			if menu._hoveredTabCount == 0 and menu.SidebarLine then
+				menu.SidebarLine.BackgroundColor3 = theme.Border
+			end
 			if menu.ActiveTab ~= self then
 				self.TabButton.BackgroundTransparency = 1
 			end
@@ -1089,7 +1097,7 @@ return (function()
 		})
 
 		-- Accent line under topbar
-		U.Create("Frame", {
+		self.AccentLine = U.Create("Frame", {
 			Name = "AccentLine",
 			Size = UDim2.new(1, -20, 0, 2),
 			Position = UDim2.new(0, 10, 1, 0),
@@ -1097,6 +1105,16 @@ return (function()
 			BorderSizePixel = 0,
 			Parent = self.Topbar,
 		})
+		self.Topbar.MouseEnter:Connect(function()
+			if self.AccentLine then
+				self.AccentLine.BackgroundColor3 = Color3.fromRGB(140, 80, 255)
+			end
+		end)
+		self.Topbar.MouseLeave:Connect(function()
+			if self.AccentLine then
+				self.AccentLine.BackgroundColor3 = theme.AccentLine
+			end
+		end)
 
 		-- Sidebar
 		local sbw = theme.SidebarWidth
@@ -1144,9 +1162,10 @@ return (function()
 		-- Track active dropdown popup (created/destroyed on demand)
 		self._activePopupFrame = nil
 		self._popupUISCon = nil
+		self._hoveredTabCount = 0
 
 		-- Separator line between sidebar and content
-		U.Create("Frame", {
+		self.SidebarLine = U.Create("Frame", {
 			Name = "SidebarLine",
 			Size = UDim2.new(0, 1, 1, -(theme.TopbarHeight + 10)),
 			Position = UDim2.new(0, sbw + 4, 0, theme.TopbarHeight + 6),
@@ -1318,10 +1337,15 @@ return (function()
 				self:HideDropdownPopup()
 			end)
 			btn.MouseEnter:Connect(function()
-				if not sel then btn.BackgroundTransparency = 0.85 end
+				if not sel then
+					btn.BackgroundColor3 = theme.Accent
+					btn.BackgroundTransparency = 0.65
+				end
 			end)
 			btn.MouseLeave:Connect(function()
-				if not sel then btn.BackgroundTransparency = 1 end
+				if not sel then
+					btn.BackgroundTransparency = 1
+				end
 			end)
 		end
 
@@ -1538,7 +1562,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.6.2", Theme = Theme }
+	local FyyUI = { Version = "0.6.3", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
