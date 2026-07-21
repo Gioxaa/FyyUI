@@ -143,6 +143,33 @@ return (function()
 		return inst
 	end
 
+	--[[ Icon Module (Lucide/Solar/etc.) — inject via FyyUI.SetIconModule() ]]
+	local IconModule = nil
+
+	local function resolveIcon(icon)
+		if not icon then return nil end
+		-- Direct rbxassetid:// (no resolution needed)
+		if type(icon) == "string" and icon:find("^rbxassetid://") then
+			return { Image = icon }
+		end
+		-- Icon module format "pack:name" (e.g. "lucide:home")
+		if type(icon) == "string" and IconModule then
+			local ok, result = pcall(IconModule.Icon2, IconModule, icon)
+			if ok and result then
+				return {
+					Image = result[1],
+					ImageRectSize = result[2].ImageRectSize,
+					ImageRectOffset = result[2].ImageRectPosition,
+				}
+			end
+		end
+		-- Fallback: treat as raw asset ID
+		if type(icon) == "string" then
+			return { Image = icon }
+		end
+		return nil
+	end
+
 	--[[ Toggle ]]
 	local Toggle = {}
 	Toggle.__index = Toggle
@@ -625,18 +652,21 @@ return (function()
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.TabButton })
 		-- Icon (optional, rbxassetid://...)
-		if options.Icon then
+		local iconProps = resolveIcon(options.Icon)
+		if iconProps then
 			U.Create("ImageLabel", {
 				Name = "Icon",
 				Size = UDim2.fromOffset(18, 18),
 				Position = UDim2.fromOffset(12, 8),
 				BackgroundTransparency = 1,
-				Image = options.Icon,
+				Image = iconProps.Image,
+				ImageRectSize = iconProps.ImageRectSize,
+				ImageRectOffset = iconProps.ImageRectOffset,
 				Parent = self.TabButton,
 			})
 		end
-		local textX = options.Icon and 36 or 14
-		local textW = options.Icon and -40 or -18
+		local textX = iconProps and 36 or 14
+		local textW = iconProps and -40 or -18
 		U.Create("TextLabel", {
 			Name = "Label",
 			Size = UDim2.new(1, textW, 1, 0),
@@ -732,16 +762,19 @@ return (function()
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = btn.Container })
 
-		-- Icon (optional, rbxassetid://...)
-		local btnIconX = options.Icon and 34 or 10
-		local btnIconW = options.Icon and -44 or -20
-		if options.Icon then
+		-- Icon (optional, rbxassetid://... or "lucide:name")
+		local btnIconProps = resolveIcon(options.Icon)
+		local btnIconX = btnIconProps and 34 or 10
+		local btnIconW = btnIconProps and -44 or -20
+		if btnIconProps then
 			U.Create("ImageLabel", {
 				Name = "Icon",
 				Size = UDim2.fromOffset(18, 18),
 				Position = UDim2.fromOffset(10, (h + 8 - 18) / 2),
 				BackgroundTransparency = 1,
-				Image = options.Icon,
+				Image = btnIconProps.Image,
+				ImageRectSize = btnIconProps.ImageRectSize,
+				ImageRectOffset = btnIconProps.ImageRectOffset,
 				Parent = btn.Container,
 			})
 		end
@@ -1651,7 +1684,11 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.7.3", Theme = Theme }
+	local FyyUI = { Version = "0.7.4", Theme = Theme }
+
+	function FyyUI.SetIconModule(mod)
+		IconModule = mod
+	end
 
 	function FyyUI.Menu(options)
 		options = options or {}
