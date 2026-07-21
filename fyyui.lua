@@ -1222,7 +1222,7 @@ return (function()
 			Size = UDim2.new(1, -(leftMargin + 50), 1, 0),
 			Position = UDim2.fromOffset(leftMargin + 18, 0),
 			BackgroundTransparency = 1,
-			Text = options.Title or "FyyUI",
+			Text = "<i>" .. (options.Title or "FyyUI") .. "</i>",
 			Font = theme.FontBold,
 			TextSize = theme.FontSizeTitle,
 			TextColor3 = theme.TextPrimary,
@@ -1728,7 +1728,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.8.3", Theme = Theme }
+	local FyyUI = { Version = "0.8.4", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
