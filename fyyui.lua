@@ -86,6 +86,43 @@ return (function()
 			Spacing = 6,
 			SidebarWidth = 150,
 		},
+		Amoled = {
+			Background = Color3.fromRGB(5, 5, 8),
+			Topbar = Color3.fromRGB(10, 10, 14),
+			TopbarBorder = Color3.fromRGB(24, 24, 32),
+			Accent = Color3.fromRGB(88, 140, 255),
+			AccentLine = Color3.fromRGB(100, 160, 255),
+			TextPrimary = Color3.fromRGB(215, 215, 225),
+			TextSecondary = Color3.fromRGB(135, 135, 150),
+			TextMuted = Color3.fromRGB(85, 85, 100),
+			Element = Color3.fromRGB(18, 18, 24),
+			ElementHover = Color3.fromRGB(28, 28, 36),
+			ElementBorder = Color3.fromRGB(32, 32, 42),
+			Outline = Color3.fromRGB(22, 22, 32),
+			ToggleOn = Color3.fromRGB(60, 200, 120),
+			ToggleOff = Color3.fromRGB(30, 30, 40),
+			ToggleKnob = Color3.fromRGB(200, 200, 210),
+			Border = Color3.fromRGB(22, 22, 30),
+			ScrollBar = Color3.fromRGB(50, 50, 65),
+			Shadow = Color3.fromRGB(0, 0, 0),
+			Sidebar = Color3.fromRGB(8, 8, 12),
+			SidebarText = Color3.fromRGB(110, 110, 130),
+			SidebarTextActive = Color3.fromRGB(215, 215, 225),
+			TabActive = Color3.fromRGB(18, 18, 24),
+			TabHover = Color3.fromRGB(28, 28, 36),
+			Font = Enum.Font.SourceSans,
+			FontBold = Enum.Font.SourceSansBold,
+			FontSize = 16,
+			FontSizeTitle = 18,
+			FontSizeSmall = 14,
+			Padding = 10,
+			CornerRadius = 8,
+			TopbarHeight = 44,
+			ElementHeight = 34,
+			DescHeight = 52,
+			Spacing = 6,
+			SidebarWidth = 150,
+		},
 	}
 
 	function Theme:Override(base, overrides)
@@ -491,8 +528,16 @@ return (function()
 		end
 
 		self.SelectBtn.MouseButton1Click:Connect(function()
-			self.Open = not self.Open
-			if self.Open then
+			if self._menu._activePopupFrame then
+				-- Popup is open → close it
+				self.Open = false
+				if self._menu._activeDropdown == self then
+					self._menu._activeDropdown = nil
+				end
+				self._menu:HideDropdownPopup()
+			else
+				-- Popup is closed → open it
+				self.Open = true
 				-- Close any other open dropdown first
 				if self._menu._activeDropdown and self._menu._activeDropdown ~= self then
 					self._menu._activeDropdown.Open = false
@@ -501,14 +546,14 @@ return (function()
 				self._menu._activeDropdown = self
 				local pos = self.SelectBtn.AbsolutePosition
 				local siz = self.SelectBtn.AbsoluteSize
-				self._menu:ShowDropdownPopup(pos, siz, self.Options, selectedIdx, function(idx, val)
+				-- Recalculate selected index (value may have changed)
+				local idx = 0
+				for i, opt in ipairs(self.Options) do
+					if opt == self.Value then idx = i; break end
+				end
+				self._menu:ShowDropdownPopup(pos, siz, self.Options, idx, function(idx, val)
 					self:SetValue(val)
 				end)
-			else
-				if self._menu._activeDropdown == self then
-					self._menu._activeDropdown = nil
-				end
-				self._menu:HideDropdownPopup()
 			end
 		end)
 
@@ -1487,7 +1532,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.5.8", Theme = Theme }
+	local FyyUI = { Version = "0.6.0", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
