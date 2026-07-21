@@ -513,7 +513,7 @@ return (function()
 		self.Open = false
 		self.HasDesc = self.Description ~= nil and self.Description ~= ""
 		local h = self.HasDesc and theme.DescHeight or theme.ElementHeight
-		local selectY = self.HasDesc and 28 or 10
+		local selectY = self.HasDesc and 32 or 28
 
 		self.Container = U.Create("Frame", {
 			Name = "Dropdown",
@@ -527,14 +527,30 @@ return (function()
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = self.Container })
 		U.Create("UIStroke", { Color = theme.ElementBorder, Transparency = 0.6, Thickness = 1, Parent = self.Container })
 
+		-- Accent line separator — runs from below the title to the bottom (kayak "TITLE |")
+		local lineY = 28
+		local lineH = h + 8 - lineY - 8
+		if lineH > 0 then
+			local accentLine = U.Create("Frame", {
+				Name = "AccentLine",
+				Size = UDim2.fromOffset(2, lineH),
+				Position = UDim2.fromOffset(12, lineY),
+				BackgroundColor3 = theme.Accent,
+				BackgroundTransparency = 0.5,
+				BorderSizePixel = 0,
+				Parent = self.Container,
+			})
+			U.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = accentLine })
+		end
+
 		U.Create("TextLabel", {
 			Name = "Label",
 			Size = UDim2.new(1, -70, 0, 20),
-			Position = UDim2.fromOffset(10, 4),
+			Position = UDim2.fromOffset(12, 6),
 			BackgroundTransparency = 1,
 			Text = self.Text,
-			Font = theme.Font,
-			TextSize = theme.FontSize,
+			Font = theme.FontBold,
+			TextSize = theme.FontSizeTitle,
 			TextColor3 = theme.TextPrimary,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			RichText = true,
@@ -545,7 +561,7 @@ return (function()
 			Name = "Select",
 			Size = UDim2.new(1, -(10 * 2), 0, 24),
 			Position = UDim2.fromOffset(10, selectY),
-			BackgroundColor3 = theme.Element,
+			BackgroundColor3 = theme.ElementHover,
 			AutoButtonColor = false,
 			Parent = self.Container,
 		})
@@ -1716,7 +1732,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.7.9", Theme = Theme }
+	local FyyUI = { Version = "0.8.0", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
