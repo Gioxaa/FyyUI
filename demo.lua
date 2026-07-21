@@ -1,7 +1,7 @@
 local FyyUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FyyWannaFly/FyyUI/main/fyyui.lua"))()
 
 local menu = FyyUI.Menu({
-	Title = "FyyUI Hub",
+	Title = "FyyCommunity",
 	Resizable = true,
 	HasOutline = true,
 	Theme = "Amoled",
@@ -78,7 +78,7 @@ settingsTab:Dropdown({
 local infoTab = menu:Tab({ Text = "Info", Icon = "info" })
 
 infoTab:BoldLabel({
-	Text = "FyyUI v" .. FyyUI.Version,
+	Text = "FyyCommunity v" .. FyyUI.Version,
 	Description = "Roblox UI Library",
 })
 
