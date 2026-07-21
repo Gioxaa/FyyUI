@@ -143,8 +143,23 @@ return (function()
 		return inst
 	end
 
-	--[[ Icon Module (Lucide/Solar/etc.) — inject via FyyUI.SetIconModule() ]]
+	--[[ Icon Module (Lucide/Solar/etc.) — auto-load dari GitHub ]]
 	local IconModule = nil
+	do
+		local iconUrl = "https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/lucide/dist/Icons.lua"
+		local ok, raw = pcall(game.HttpGet, game, iconUrl)
+		if not ok then
+			ok, raw = pcall(function()
+				return game:GetService("HttpService"):GetAsync(iconUrl)
+			end)
+		end
+		if ok and raw then
+			local ok2, mod = pcall(loadstring, raw)
+			if ok2 and mod then
+				IconModule = mod()
+			end
+		end
+	end
 
 	local function resolveIcon(icon)
 		if not icon then return nil end
@@ -1684,10 +1699,13 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.7.4", Theme = Theme }
+	local FyyUI = { Version = "0.7.5", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
+	end
+	function FyyUI.GetIconModule()
+		return IconModule
 	end
 
 	function FyyUI.Menu(options)
