@@ -575,26 +575,30 @@ return (function()
 			Size = UDim2.fromOffset(16, 16),
 			Position = UDim2.new(1, -20, 0.5, -8),
 			BackgroundTransparency = 1,
-			Image = ARROW_RIGHT,
+			Image = ARROW_DOWN,
 			Parent = self.SelectBtn,
 		})
-		local function updateArrow()
-			self._arrow.Image = self.Open and ARROW_DOWN or ARROW_RIGHT
+		-- Arrow sync: closed = ▼ down, open = ▶ right
+		local function setArrowIcon()
+			self._arrow.Image = self.Open and ARROW_RIGHT or ARROW_DOWN
 		end
-		self._updateArrow = updateArrow
-		updateArrow() -- ensure correct initial state (collapsed = right)
+		self._setArrow = setArrowIcon
 
-			-- Find selected index
+		-- Find selected index
 		local selectedIdx = 0
 		for i, opt in ipairs(self.Options) do
 			if opt == self.Value then selectedIdx = i; break end
+		end
+
+		local function onDropdownToggle()
+			self._arrow.Image = self.Open and ARROW_RIGHT or ARROW_DOWN
 		end
 
 		self.SelectBtn.MouseButton1Click:Connect(function()
 			if self._menu._activePopupFrame then
 				-- Popup is open → close it
 				self.Open = false
-				if self._updateArrow then self._updateArrow() end
+				onDropdownToggle()
 				if self._menu._activeDropdown == self then
 					self._menu._activeDropdown = nil
 				end
@@ -602,10 +606,11 @@ return (function()
 			else
 				-- Popup is closed → open it
 				self.Open = true
-				if self._updateArrow then self._updateArrow() end
+				onDropdownToggle()
 				-- Close any other open dropdown first
 				if self._menu._activeDropdown and self._menu._activeDropdown ~= self then
 					self._menu._activeDropdown.Open = false
+					if self._menu._activeDropdown._setArrow then self._menu._activeDropdown._setArrow() end
 					self._menu:HideDropdownPopup()
 				end
 				self._menu._activeDropdown = self
@@ -1197,12 +1202,12 @@ return (function()
 			leftMargin = rightMargin + 8
 			rightMargin = 10
 		else
-			local BTN_ICONS = {
+			local WIN_ICONS = {
 				Minimize = "rbxassetid://118026365011536",
 				Maximize = "rbxassetid://123104789658180",
 				Close = "rbxassetid://110786993356448",
 			}
-			local function winBtn(name, action, xOff, hoverColor)
+			local function winBtn(name, action, xOff, hoverC)
 				local b = U.Create("ImageButton", {
 					Name = name,
 					Size = UDim2.fromOffset(26, 26),
@@ -1211,26 +1216,30 @@ return (function()
 					AutoButtonColor = false,
 					Parent = self.Topbar,
 				})
+				U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = b })
 				local icon = U.Create("ImageLabel", {
 					Name = "Icon",
-					Size = UDim2.fromOffset(14, 14),
+					Size = UDim2.fromOffset(18, 18),
 					Position = UDim2.fromScale(0.5, 0.5),
 					AnchorPoint = Vector2.new(0.5, 0.5),
 					BackgroundTransparency = 1,
 					ImageColor3 = Color3.fromRGB(150, 150, 165),
-					Image = BTN_ICONS[name],
+					Image = WIN_ICONS[name],
 					Parent = b,
 				})
 				b.MouseEnter:Connect(function()
+					b.BackgroundTransparency = 0
+					b.BackgroundColor3 = hoverC
 					icon.ImageColor3 = Color3.fromRGB(225, 225, 235)
 				end)
 				b.MouseLeave:Connect(function()
+					b.BackgroundTransparency = 1
 					icon.ImageColor3 = Color3.fromRGB(150, 150, 165)
 				end)
 				b.MouseButton1Click:Connect(action)
 				return b
 			end
-			winBtn("Close", function() self:SetVisible(false) end, -36)
+			winBtn("Close", function() self:SetVisible(false) end, -36, Color3.fromRGB(200, 60, 60))
 			winBtn("Maximize", function()
 				self.Maximized = not self.Maximized
 				if self.Maximized then
@@ -1244,7 +1253,7 @@ return (function()
 					self.Frame.Size = self._prevSize or UDim2.fromOffset(size.X, size.Y)
 				end
 				if self._updateShadow then self._updateShadow() end
-			end, -66)
+			end, -66, Color3.fromRGB(45, 45, 55))
 			winBtn("Minimize", function()
 				self.Minimized = not self.Minimized
 				if self.Minimized then
@@ -1257,7 +1266,7 @@ return (function()
 					self.Sidebar.Visible = true
 					self.ContentArea.Visible = true
 				end
-			end, -96)
+			end, -96, Color3.fromRGB(45, 45, 55))
 		end
 
 		-- Logo
@@ -1677,7 +1686,7 @@ return (function()
 		end
 		if self._activeDropdown then
 			self._activeDropdown.Open = false
-			if self._activeDropdown._updateArrow then self._activeDropdown._updateArrow() end
+			if self._activeDropdown._setArrow then self._activeDropdown._setArrow() end
 			self._activeDropdown = nil
 		end
 	end
@@ -1860,7 +1869,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.7", Theme = Theme }
+	local FyyUI = { Version = "0.9.8", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
