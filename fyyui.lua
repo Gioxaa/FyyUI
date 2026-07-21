@@ -676,6 +676,17 @@ return (function()
 			Parent = menu.SidebarList,
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.TabButton })
+		-- Active glow overlay (subtle white, visible when tab is selected)
+		self._glow = U.Create("Frame", {
+			Name = "Glow",
+			Size = UDim2.new(1, 0, 1, 0),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ZIndex = 0,
+			Parent = self.TabButton,
+		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self._glow })
 		-- Icon (optional, rbxassetid://...)
 		local iconProps = resolveIcon(options.Icon)
 		if iconProps then
@@ -690,15 +701,15 @@ return (function()
 				Parent = self.TabButton,
 			})
 		end
-		local textX = iconProps and 36 or 14
-		local textW = iconProps and -40 or -18
+		local textX = iconProps and 38 or 16
+		local textW = iconProps and -42 or -20
 		U.Create("TextLabel", {
 			Name = "Label",
 			Size = UDim2.new(1, textW, 1, 0),
 			Position = UDim2.fromOffset(textX, 0),
 			BackgroundTransparency = 1,
 			Text = self.Text,
-			Font = theme.Font,
+			Font = theme.FontBold,
 			TextSize = theme.FontSize,
 			TextColor3 = theme.SidebarText,
 			TextXAlignment = Enum.TextXAlignment.Left,
@@ -1271,10 +1282,10 @@ return (function()
 		-- Shared ActiveBar — slides vertically between tabs (parented to Sidebar, NOT SidebarList, to avoid UIListLayout interference)
 		self.ActiveBar = U.Create("Frame", {
 			Name = "ActiveBar",
-			Size = UDim2.fromOffset(3, 18),
+			Size = UDim2.fromOffset(4, 20),
 			Position = UDim2.fromOffset(5, 0),
 			BackgroundTransparency = 1,
-			BackgroundColor3 = theme.Accent,
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 			BorderSizePixel = 0,
 			ZIndex = 2,
 			Parent = self.Sidebar,
@@ -1355,6 +1366,7 @@ return (function()
 			old.Container.Visible = false
 			old.Container.Position = UDim2.fromOffset(6, 3) -- reset
 			old.TabButton.BackgroundTransparency = 1
+			if old._glow then old._glow.BackgroundTransparency = 1 end
 			local lbl = old.TabButton:FindFirstChild("Label")
 			if lbl then lbl.TextColor3 = self.Theme.SidebarText end
 		end
@@ -1372,8 +1384,8 @@ return (function()
 				for i, t in ipairs(self.Tabs) do
 					if t == tab then tabIdx = i; break end
 				end
-				local targetY = (tabIdx - 1) * 36 + 8 -- (34 height + 2 padding) + bar center offset
-				self.ActiveBar.BackgroundTransparency = 0
+				local targetY = (tabIdx - 1) * 36 + 7 -- (34 height + 2 padding) + bar center offset (34-20)/2
+				self.ActiveBar.BackgroundTransparency = 0.25
 				if hadPrevTab then
 					ts:Create(self.ActiveBar, ti, { Position = UDim2.fromOffset(5, targetY) }):Play()
 				else
@@ -1384,6 +1396,7 @@ return (function()
 			-- Tab button visual
 			tab.TabButton.BackgroundTransparency = 0
 			tab.TabButton.BackgroundColor3 = self.Theme.TabActive
+			if tab._glow then tab._glow.BackgroundTransparency = 0.85 end
 			local lbl = tab.TabButton:FindFirstChild("Label")
 			if lbl then lbl.TextColor3 = self.Theme.SidebarTextActive end
 		end
@@ -1709,7 +1722,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.7.6", Theme = Theme }
+	local FyyUI = { Version = "0.7.7", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
