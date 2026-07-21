@@ -1188,8 +1188,8 @@ return (function()
 		local frameAbs = self.Frame.AbsolutePosition
 		local frameSiz = self.Frame.AbsoluteSize
 		local px = frameSiz.X
-		local py = theme.TopbarHeight
-		local panelH = frameSiz.Y - theme.TopbarHeight
+		local py = 0
+		local panelH = frameSiz.Y
 
 		-- Create popup with 0 width → tween to slide in from right
 		local popup = U.Create("Frame", {
@@ -1487,7 +1487,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.5.7", Theme = Theme }
+	local FyyUI = { Version = "0.5.8", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
