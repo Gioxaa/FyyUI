@@ -1240,17 +1240,29 @@ return (function()
 				Position = UDim2.fromOffset(statsX, 0),
 				BackgroundTransparency = 1,
 				Text = "---",
-				Font = theme.Font,
+				Font = theme.FontBold,
 				TextSize = theme.FontSizeSmall,
 				TextColor3 = theme.TextPrimary,
 				TextXAlignment = Enum.TextXAlignment.Left,
+				RichText = true,
 				Parent = self.Topbar,
 			})
 			local _frameCount = 0
 			local _lastTime = tick()
 			local _currentFps = 0
+			local _currentPing = 0
+			local _pingTime = tick()
+			local _green = Color3.fromRGB(0, 200, 80)
+			local _yellow = Color3.fromRGB(230, 200, 0)
+			local _red = Color3.fromRGB(230, 50, 50)
+			local function _hex(c)
+				local ok, h = pcall(c.ToHex, c)
+				if ok and h then return h end
+				return ("%02x%02x%02x"):format(c.R * 255, c.G * 255, c.B * 255)
+			end
 			self._heartbeatCon = game:GetService("RunService").Heartbeat:Connect(function()
 				if not self.StatusLabel then return end
+				-- FPS counter
 				_frameCount = _frameCount + 1
 				local now = tick()
 				if now - _lastTime >= 1 then
@@ -1258,7 +1270,22 @@ return (function()
 					_frameCount = 0
 					_lastTime = now
 				end
-				self.StatusLabel.Text = _currentFps .. " FPS"
+				-- Ping every 2s
+				if now - _pingTime >= 2 then
+					_pingTime = now
+					local ok, v = pcall(function()
+						local s = game:GetService("Stats")
+						return s.Network.ServerStatsItem["Data Ping"]:GetValue()
+					end)
+					if ok then _currentPing = math.floor(v) end
+				end
+				-- Build text
+				local fpsColor = _currentFps >= 50 and _green or _currentFps >= 40 and _yellow or _red
+				local pingColor = _currentPing > 0 and (_currentPing < 50 and _green or _currentPing < 100 and _yellow or _red)
+				self.StatusLabel.Text = ("<font color='#%s'>%s FPS</font>"):format(_hex(fpsColor), _currentFps)
+				if _currentPing > 0 then
+					self.StatusLabel.Text = self.StatusLabel.Text .. (" • <font color='#%s'>%s MS</font>"):format(_hex(pingColor), _currentPing)
+				end
 			end)
 		end
 
@@ -1761,7 +1788,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.1", Theme = Theme }
+	local FyyUI = { Version = "0.9.2", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
