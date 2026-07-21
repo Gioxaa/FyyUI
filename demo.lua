@@ -37,7 +37,6 @@ mainTab:Button({
 	Text = "Stop",
 	Description = "Stops all automation",
 	Color = Color3.fromRGB(255, 80, 80),
-	Icon = "square",
 	Callback = function() print("Stopped!") end,
 })
 
