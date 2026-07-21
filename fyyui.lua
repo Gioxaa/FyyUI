@@ -624,16 +624,6 @@ return (function()
 			Parent = menu.SidebarList,
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.TabButton })
-		self._activeBar = U.Create("Frame", {
-			Name = "ActiveBar",
-			Size = UDim2.fromOffset(3, 18),
-			Position = UDim2.new(0, 2, 0.5, -9),
-			BackgroundTransparency = 1,
-			BackgroundColor3 = theme.Accent,
-			BorderSizePixel = 0,
-			Parent = self.TabButton,
-		})
-		U.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = self._activeBar })
 		U.Create("TextLabel", {
 			Name = "Label",
 			Size = UDim2.new(1, -14, 1, 0),
@@ -1193,6 +1183,19 @@ return (function()
 			end
 		end)
 
+		-- Shared ActiveBar — slides vertically between tabs
+		self.ActiveBar = U.Create("Frame", {
+			Name = "ActiveBar",
+			Size = UDim2.fromOffset(3, 18),
+			Position = UDim2.fromOffset(5, 0),
+			BackgroundTransparency = 1,
+			BackgroundColor3 = theme.Accent,
+			BorderSizePixel = 0,
+			ZIndex = 2,
+			Parent = self.SidebarList,
+		})
+		U.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = self.ActiveBar })
+
 		-- Content Area
 		self.ContentArea = U.Create("Frame", {
 			Name = "Content",
@@ -1257,42 +1260,38 @@ return (function()
 		if self.ActiveTab == tab then return end
 		self:HideDropdownPopup()
 		local ts = game:GetService("TweenService")
-		local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-		local offsetY = 40
+		local ti = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		local offsetY = 36
 
+		-- Hide old tab content immediately (no glitchy slide-out)
 		if self.ActiveTab then
 			local old = self.ActiveTab
-			ts:Create(old.Container, ti, { Position = UDim2.fromOffset(6, -offsetY) }):Play()
-			task.spawn(function()
-				task.wait(0.22)
-				if old and old.Container then
-					old.Container.Visible = false
-					old.Container.Position = UDim2.fromOffset(6, 3)
-				end
-			end)
+			old.Container.Visible = false
+			old.Container.Position = UDim2.fromOffset(6, 3) -- reset
 			old.TabButton.BackgroundTransparency = 1
 			local lbl = old.TabButton:FindFirstChild("Label")
 			if lbl then lbl.TextColor3 = self.Theme.SidebarText end
-			local bar = old.TabButton:FindFirstChild("ActiveBar")
-			if bar then
-				ts:Create(bar, ti, { BackgroundTransparency = 1, Size = UDim2.fromOffset(0, 18) }):Play()
-			end
 		end
+
 		self.ActiveTab = tab
 		if tab then
+			-- New tab slides in from below
 			tab.Container.Position = UDim2.fromOffset(6, offsetY)
 			tab.Container.Visible = true
 			ts:Create(tab.Container, ti, { Position = UDim2.fromOffset(6, 3) }):Play()
+
+			-- Shared ActiveBar slides to this tab's position
+			local btnY = tab.TabButton.Position.Y.Offset
+			if self.ActiveBar then
+				self.ActiveBar.BackgroundTransparency = 0
+				ts:Create(self.ActiveBar, ti, { Position = UDim2.fromOffset(5, btnY + 8) }):Play()
+			end
+
+			-- Tab button visual
 			tab.TabButton.BackgroundTransparency = 0
 			tab.TabButton.BackgroundColor3 = self.Theme.TabActive
 			local lbl = tab.TabButton:FindFirstChild("Label")
 			if lbl then lbl.TextColor3 = self.Theme.SidebarTextActive end
-			local bar = tab.TabButton:FindFirstChild("ActiveBar")
-			if bar then
-				bar.Size = UDim2.fromOffset(0, 18)
-				bar.BackgroundTransparency = 0
-				ts:Create(bar, ti, { Size = UDim2.fromOffset(3, 18) }):Play()
-			end
 		end
 	end
 
@@ -1616,7 +1615,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.6.5", Theme = Theme }
+	local FyyUI = { Version = "0.7.0", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
