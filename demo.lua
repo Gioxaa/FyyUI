@@ -76,15 +76,21 @@ settingsTab:Dropdown({
 -- Tab 3: Info
 local infoTab = menu:Tab({ Text = "Info" })
 
-infoTab:Label({
+infoTab:BoldLabel({
 	Text = "FyyUI v" .. FyyUI.Version,
 	Description = "Roblox UI Library",
 })
 
-infoTab:Label({
+infoTab:BoldLabel({
 	Text = "Status: Running",
 	Color = Color3.fromRGB(0, 200, 100),
 })
+
+infoTab:Divider()
+
+infoTab:BoldLabel({ Text = "Sections" })
+infoTab:Label({ Text = "Regular label example" })
+infoTab:Label({ Text = "Another regular label" })
 
 -- Toggle keybind
 game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)

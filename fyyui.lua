@@ -849,12 +849,12 @@ return (function()
 
 		lbl.TextLabel = U.Create("TextLabel", {
 			Name = "Text",
-			Size = UDim2.new(1, 0, 0, hasDesc and 20 or h),
-			Position = UDim2.fromOffset(0, hasDesc and 2 or (h - 20) / 2 + 1),
+			Size = UDim2.new(1, 0, 0, hasDesc and 22 or h),
+			Position = UDim2.fromOffset(0, hasDesc and 2 or (h - 22) / 2 + 1),
 			BackgroundTransparency = 1,
 			Text = options.Text or "",
 			Font = self.Theme.FontBold,
-			TextSize = options.TextSize or self.Theme.FontSize,
+			TextSize = options.TextSize or self.Theme.FontSizeTitle,
 			TextColor3 = options.Color or self.Theme.TextPrimary,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			RichText = true,
@@ -1199,6 +1199,7 @@ return (function()
 			Size = UDim2.new(1, -(sbw + 8), 1, -(theme.TopbarHeight + 6)),
 			Position = UDim2.new(0, sbw + 6, 0, theme.TopbarHeight + 4),
 			BackgroundTransparency = 1,
+			ClipsDescendants = true,
 			Parent = self.Frame,
 		})
 
@@ -1257,9 +1258,18 @@ return (function()
 		self:HideDropdownPopup()
 		local ts = game:GetService("TweenService")
 		local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		local offsetY = 40
+
 		if self.ActiveTab then
 			local old = self.ActiveTab
-			old.Container.Visible = false
+			ts:Create(old.Container, ti, { Position = UDim2.fromOffset(6, -offsetY) }):Play()
+			task.spawn(function()
+				task.wait(0.22)
+				if old and old.Container then
+					old.Container.Visible = false
+					old.Container.Position = UDim2.fromOffset(6, 3)
+				end
+			end)
 			old.TabButton.BackgroundTransparency = 1
 			local lbl = old.TabButton:FindFirstChild("Label")
 			if lbl then lbl.TextColor3 = self.Theme.SidebarText end
@@ -1270,7 +1280,9 @@ return (function()
 		end
 		self.ActiveTab = tab
 		if tab then
+			tab.Container.Position = UDim2.fromOffset(6, offsetY)
 			tab.Container.Visible = true
+			ts:Create(tab.Container, ti, { Position = UDim2.fromOffset(6, 3) }):Play()
 			tab.TabButton.BackgroundTransparency = 0
 			tab.TabButton.BackgroundColor3 = self.Theme.TabActive
 			local lbl = tab.TabButton:FindFirstChild("Label")
@@ -1604,7 +1616,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.6.4", Theme = Theme }
+	local FyyUI = { Version = "0.6.5", Theme = Theme }
 
 	function FyyUI.Menu(options)
 		options = options or {}
