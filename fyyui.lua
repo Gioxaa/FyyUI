@@ -1248,19 +1248,20 @@ return (function()
 			})
 			self._heartbeatCon = game:GetService("RunService").Heartbeat:Connect(function()
 				if not self.StatusLabel then return end
-				local ok, fps, ping = pcall(function()
-					local s = game:GetService("Stats")
-					local f = math.floor(s.FPS)
-					local p = 0
-					local ok2, v = pcall(function()
-						return s.Network.ServerStatsItem["Data Ping"]:GetValue()
-					end)
-					if ok2 then p = math.floor(v) end
-					return f, p
-				end)
+				local text = "---"
+				local ok, s = pcall(function() return game:GetService("Stats") end)
 				if ok then
-					self.StatusLabel.Text = fps .. " FPS • " .. ping .. " MS"
+					local fps = math.floor(s.FPS)
+					text = fps .. " FPS"
+					local ok2, pingItem = pcall(function()
+						return s.Network.ServerStatsItem["Data Ping"]
+					end)
+					if ok2 and pingItem then
+						local v = pingItem:GetValue()
+						text = text .. " • " .. math.floor(v) .. " MS"
+					end
 				end
+				self.StatusLabel.Text = text
 			end)
 		end
 
@@ -1763,7 +1764,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.8.9", Theme = Theme }
+	local FyyUI = { Version = "0.9.0", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
