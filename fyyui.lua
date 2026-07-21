@@ -1241,7 +1241,7 @@ return (function()
 				Text = "---",
 				Font = theme.Font,
 				TextSize = theme.FontSizeSmall,
-				TextColor3 = theme.TextSecondary,
+				TextColor3 = theme.TextPrimary,
 				TextXAlignment = Enum.TextXAlignment.Right,
 				Parent = self.Topbar,
 			})
