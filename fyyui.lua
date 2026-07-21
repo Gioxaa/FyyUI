@@ -586,39 +586,35 @@ return (function()
 			if opt == self.Value then selectedIdx = i; break end
 		end
 
-		-- Dropdown toggle — arrow ▼=closed ▶=open
-		self.Container.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then
-				if self._menu._activePopupFrame then
-					self.Open = false
-					self.SelectBtn.BackgroundColor3 = theme.ElementHover
-					if self._arrow then self._arrow.Text = "▼" end
-					if self._menu._activeDropdown == self then
-						self._menu._activeDropdown = nil
+		-- Dropdown toggle
+		self.SelectBtn.MouseButton1Click:Connect(function()
+			if self._menu._activePopupFrame then
+				self.Open = false
+				if self._arrow then self._arrow.Text = "▼" end
+				if self._menu._activeDropdown == self then
+					self._menu._activeDropdown = nil
+				end
+				self._menu:HideDropdownPopup()
+			else
+				self.Open = true
+				if self._arrow then self._arrow.Text = "▶" end
+				if self._menu._activeDropdown and self._menu._activeDropdown ~= self then
+					self._menu._activeDropdown.Open = false
+					if self._menu._activeDropdown._arrow then
+						self._menu._activeDropdown._arrow.Text = "▼"
 					end
 					self._menu:HideDropdownPopup()
-				else
-					self.Open = true
-					self.SelectBtn.BackgroundColor3 = theme.Accent
-					if self._arrow then self._arrow.Text = "▶" end
-					if self._menu._activeDropdown and self._menu._activeDropdown ~= self then
-						self._menu._activeDropdown.Open = false
-						if self._menu._activeDropdown._arrow then
-							self._menu._activeDropdown._arrow.Text = "▼"
-						end
-						self._menu:HideDropdownPopup()
-					end
-					self._menu._activeDropdown = self
-					local pos = self.SelectBtn.AbsolutePosition
-					local siz = self.SelectBtn.AbsoluteSize
-					local idx = 0
-					for i, opt in ipairs(self.Options) do
-						if opt == self.Value then idx = i; break end
-					end
-					self._menu:ShowDropdownPopup(pos, siz, self.Options, idx, function(idx, val)
-						self:SetValue(val)
-					end)
 				end
+				self._menu._activeDropdown = self
+				local pos = self.SelectBtn.AbsolutePosition
+				local siz = self.SelectBtn.AbsoluteSize
+				local idx = 0
+				for i, opt in ipairs(self.Options) do
+					if opt == self.Value then idx = i; break end
+				end
+				self._menu:ShowDropdownPopup(pos, siz, self.Options, idx, function(idx, val)
+					self:SetValue(val)
+				end)
 			end
 		end)
 
@@ -1670,14 +1666,16 @@ return (function()
 			self._popupUISCon = nil
 		end
 		if self._activePopupFrame then
+			local popup = self._activePopupFrame
+			self._activePopupFrame = nil
 			local ts = game:GetService("TweenService")
 			local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-			local curSize = self._activePopupFrame.Size
-			local tw = ts:Create(self._activePopupFrame, ti, { Size = UDim2.fromOffset(0, curSize.Y.Offset) })
+			local curSize = popup.Size
+			local tw = ts:Create(popup, ti, { Size = UDim2.fromOffset(0, curSize.Y.Offset) })
+			tw.Completed:Connect(function()
+				pcall(function() popup:Destroy() end)
+			end)
 			tw:Play()
-			tw.Completed:Wait()
-			self._activePopupFrame:Destroy()
-			self._activePopupFrame = nil
 		end
 		if self._activeDropdown then
 			self._activeDropdown.Open = false
@@ -1866,7 +1864,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.12", Theme = Theme }
+	local FyyUI = { Version = "0.9.13", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
