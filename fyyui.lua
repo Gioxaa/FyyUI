@@ -1204,27 +1204,23 @@ return (function()
 			leftMargin = leftMargin + logoSize + 8
 		end
 
-		-- Title
-		-- Title vertical separator | nyambung ke AccentLine
-		local titleText = options.Title or "FyyUI"
-		local textBounds = game:GetService("TextService"):GetTextSize(
-			titleText, theme.FontSizeTitle, theme.FontBold, Vector2.new(1000, 1000)
-		)
-		local sepX = leftMargin + 3 + textBounds.X + 10
+		-- Title vertical separator | — aligns with SidebarLine (sbw + 4)
+		local sepX = theme.SidebarWidth + 4
 		self.TitleSep = U.Create("Frame", {
 			Name = "TitleSep",
-			Size = UDim2.fromOffset(2, theme.TopbarHeight + 2),
+			Size = UDim2.fromOffset(2, theme.TopbarHeight),
 			Position = UDim2.fromOffset(sepX, 0),
-			BackgroundColor3 = theme.AccentLine,
+			BackgroundColor3 = theme.Border,
 			BorderSizePixel = 0,
 			ZIndex = 1,
 			Parent = self.Topbar,
 		})
 
+		-- Title
 		self.Title = U.Create("TextLabel", {
 			Name = "Title",
 			Size = UDim2.new(1, -(leftMargin + 50), 1, 0),
-			Position = UDim2.fromOffset(leftMargin + 3, 0),
+			Position = UDim2.fromOffset(leftMargin + 8, 0),
 			BackgroundTransparency = 1,
 			Text = options.Title or "FyyUI",
 			Font = theme.FontBold,
@@ -1732,7 +1728,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.8.1", Theme = Theme }
+	local FyyUI = { Version = "0.8.2", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
