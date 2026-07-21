@@ -1235,27 +1235,31 @@ return (function()
 		if options.Stats then
 			self.StatusLabel = U.Create("TextLabel", {
 				Name = "Status",
-				Size = UDim2.fromOffset(120, 20),
-				Position = UDim2.new(1, -160, 0.5, -10),
+				Size = UDim2.fromOffset(110, 20),
+				Position = UDim2.new(1, -150, 0.5, -10),
 				BackgroundTransparency = 1,
-				Text = "",
+				Text = "---",
 				Font = theme.Font,
 				TextSize = theme.FontSizeSmall,
-				TextColor3 = theme.TextMuted,
+				TextColor3 = theme.TextSecondary,
 				TextXAlignment = Enum.TextXAlignment.Right,
 				Parent = self.Topbar,
 			})
-			local stats = game:GetService("Stats")
-			local networkStats = stats.Network
 			self._heartbeatCon = game:GetService("RunService").Heartbeat:Connect(function()
 				if not self.StatusLabel then return end
-				local fps = math.floor(stats.FPS)
-				local ping = 0
-				local success, val = pcall(function()
-					return networkStats.ServerStatsItem["Data Ping"]:GetValue()
+				local ok, fps, ping = pcall(function()
+					local s = game:GetService("Stats")
+					local f = math.floor(s.FPS)
+					local p = 0
+					local ok2, v = pcall(function()
+						return s.Network.ServerStatsItem["Data Ping"]:GetValue()
+					end)
+					if ok2 then p = math.floor(v) end
+					return f, p
 				end)
-				if success then ping = math.floor(val) end
-				self.StatusLabel.Text = fps .. " FPS  •  " .. ping .. " MS"
+				if ok then
+					self.StatusLabel.Text = fps .. " FPS • " .. ping .. " MS"
+				end
 			end)
 		end
 
@@ -1758,7 +1762,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.8.6", Theme = Theme }
+	local FyyUI = { Version = "0.8.7", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
