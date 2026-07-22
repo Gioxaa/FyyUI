@@ -805,9 +805,9 @@ return (function()
 			U.Create("ImageLabel", {
 				Name = "Pointer",
 				Size = UDim2.fromOffset(42, 42),
-				Position = UDim2.new(1, -48, 0.5, -21),
+				Position = UDim2.new(1, -48, 0.5, -26),
 				BackgroundTransparency = 1,
-				ImageTransparency = 0.3,
+				ImageTransparency = 0.5,
 				Image = _rightIcon.Image,
 				ImageRectSize = _rightIcon.ImageRectSize,
 				ImageRectOffset = _rightIcon.ImageRectOffset,
@@ -859,6 +859,12 @@ return (function()
 
 		btn.Container.MouseEnter:Connect(function() btn.Container.BackgroundColor3 = theme.ElementHover end)
 		btn.Container.MouseLeave:Connect(function() btn.Container.BackgroundColor3 = theme.Element end)
+		btn.Container.MouseButton1Down:Connect(function()
+			btn.Container.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+		end)
+		btn.Container.MouseButton1Up:Connect(function()
+			btn.Container.BackgroundColor3 = theme.ElementHover
+		end)
 		btn.Container.MouseButton1Click:Connect(function() if options.Callback then options.Callback() end end)
 		btn.SetText = function(text)
 			local t = btn.Container:FindFirstChild("Text")
@@ -1856,7 +1862,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.16", Theme = Theme }
+	local FyyUI = { Version = "0.9.18", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
