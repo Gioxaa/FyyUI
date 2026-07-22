@@ -9,124 +9,85 @@ local menu = FyyUI.Menu({
 	Logo = true,
 })
 
--- Icon names auto-loaded from Lucide GitHub — just use the name
-local mainTab = menu:Tab({ Text = "Main", Icon = "zap" })
+-- Tab 1: Combat
+local combatTab = menu:Tab({ Text = "Combat", Icon = "crosshair" })
 
-mainTab:Toggle({
-	Text = "Auto Farm",
-	Description = "Automatically farms ores",
-	Default = false,
-	Callback = function(v) print("[Auto Farm]", v) end,
-})
+local aimbot = combatTab:Collapsible("Aimbot", { DefaultOpen = true })
+aimbot:Toggle({ Text = "Silent Aim", Description = "Silent aim at nearest target", Default = true })
+aimbot:Checkbox({ Text = "Wall Check", Default = true })
+aimbot:Slider({ Text = "Smoothness", Min = 1, Max = 100, Default = 50, Suffix = "%" })
+aimbot:Slider({ Text = "FOV Range", Min = 1, Max = 360, Default = 180, Suffix = "°" })
+aimbot:Dropdown({ Text = "Hit Part", Options = { "Head", "Torso", "Legs", "Random" }, Default = "Head" })
+aimbot:Checkbox({ Text = "Draw FOV Circle", Default = false })
 
-mainTab:Toggle({
-	Text = "Auto Collect",
-	Description = "Collects dropped items",
-	Default = true,
-	Callback = function(v) print("[Auto Collect]", v) end,
-})
+local triggerbot = combatTab:Collapsible("Trigger Bot")
+triggerbot:Toggle({ Text = "Trigger Bot", Description = "Auto-shoot when target is in crosshair", Default = false })
+triggerbot:Slider({ Text = "Delay", Min = 0, Max = 500, Default = 50, Suffix = "ms" })
+triggerbot:Checkbox({ Text = "Only Visible", Default = true })
+triggerbot:Dropdown({ Text = "Trigger Key", Options = { "Mouse Left", "Mouse Right", "Shift", "None" }, Default = "Mouse Left" })
 
-mainTab:Divider()
+combatTab:Divider()
 
-mainTab:Button({
-	Text = "Toggle All",
-	Description = "Enable or disable all features",
-	Callback = function() print("Toggle All!") end,
-})
+local visuals = combatTab:Collapsible("Visuals", { DefaultOpen = true })
+visuals:Toggle({ Text = "ESP Box", Description = "Draw boxes around players", Default = true })
+visuals:Toggle({ Text = "Tracers", Description = "Draw lines to targets", Default = false })
+visuals:Checkbox({ Text = "Health Bar", Default = true })
+visuals:Checkbox({ Text = "Distance", Default = false })
+visuals:Slider({ Text = "Max Render Distance", Min = 100, Max = 5000, Default = 1500, Suffix = "m", Step = 100 })
+visuals:Dropdown({ Text = "Box Type", Options = { "2D", "Corner", "3D" }, Default = "2D" })
+visuals:Dropdown({ Text = "Tracer Position", Options = { "Bottom", "Middle", "Top" }, Default = "Bottom" })
 
-mainTab:Button({
-	Text = "Stop",
-	Description = "Stops all automation",
-	Color = Color3.fromRGB(255, 80, 80),
-	Icon = "square",
-	Callback = function() print("Stopped!") end,
-})
+-- Tab 2: Automation
+local autoTab = menu:Tab({ Text = "Auto", Icon = "zap" })
 
-mainTab:Divider()
+local farming = autoTab:Collapsible("Farming", { DefaultOpen = true })
+farming:Toggle({ Text = "Auto Farm", Description = "Automatically farms ores", Default = true })
+farming:Toggle({ Text = "Auto Collect", Description = "Collect dropped items", Default = true })
+farming:Checkbox({ Text = "Ignore Gold", Default = false })
+farming:Checkbox({ Text = "Auto Sell", Default = true })
+farming:Slider({ Text = "Farm Range", Min = 10, Max = 200, Default = 75, Suffix = "m", Step = 5 })
+farming:Slider({ Text = "Sell Interval", Min = 30, Max = 600, Default = 120, Suffix = "s", Step = 10 })
 
-mainTab:Button({
-	Text = "Refresh",
-	Description = "Reload configuration",
-	Icon = "refresh-cw",
-	Callback = function() print("Refreshed!") end,
-})
+local movement = autoTab:Collapsible("Movement")
+movement:Toggle({ Text = "Auto Jump", Description = "Auto jump when walking", Default = false })
+movement:Toggle({ Text = "Speed Boost", Description = "Increases movement speed", Default = false })
+movement:Slider({ Text = "Speed Multiplier", Min = 1, Max = 5, Default = 2, Suffix = "x", Step = 0.5 })
+movement:Checkbox({ Text = "Bunny Hop", Default = true })
 
--- Tab 2: Settings
+autoTab:Divider()
+
+autoTab:Button({ Text = "Toggle All", Description = "Enable all automation features", Icon = "toggle-right", Callback = function() print("Toggled all!") end })
+autoTab:Button({ Text = "Stop All", Description = "Disable all automation", Color = Color3.fromRGB(230, 60, 60), Icon = "square", Callback = function() print("Stopped all!") end })
+
+-- Tab 3: Settings
 local settingsTab = menu:Tab({ Text = "Settings", Icon = "settings" })
 
-settingsTab:Slider({
-	Text = "Speed",
-	Description = "Adjust movement speed",
-	Min = 1,
-	Max = 200,
-	Default = 50,
-	Suffix = "%",
-	Callback = function(v) print("[Speed]", v) end,
-})
+local general = settingsTab:Collapsible("General", { DefaultOpen = true })
+general:Dropdown({ Text = "Theme", Options = { "Dark", "Light", "Amoled" }, Default = "Amoled", Callback = function(v) print("[Theme]", v) end })
+general:Checkbox({ Text = "Show Watermark", Default = true })
+general:Checkbox({ Text = "Auto Update", Default = true })
+general:Slider({ Text = "UI Scale", Min = 0.5, Max = 1.5, Default = 1, Suffix = "x", Step = 0.1 })
 
-settingsTab:Slider({
-	Text = "Range",
-	Description = "Collection range",
-	Min = 10,
-	Max = 100,
-	Default = 50,
-	Suffix = "m",
-	Step = 5,
-	Callback = function(v) print("[Range]", v) end,
-})
+local keybinds = settingsTab:Collapsible("Keybinds")
+keybinds:Dropdown({ Text = "Toggle Menu", Options = { "RightShift", "LeftShift", "RightCtrl", "F1", "F2", "F3" }, Default = "RightShift" })
+keybinds:Dropdown({ Text = "Panic Key", Options = { "None", "F1", "F2", "F3", "Insert", "Delete" }, Default = "None" })
+keybinds:Checkbox({ Text = "Hold to Aim", Default = false })
 
-settingsTab:Divider()
-
-settingsTab:Dropdown({
-	Text = "Mode",
-	Description = "Select automation mode",
-	Options = { "Normal", "Advanced", "Expert" },
-	Default = "Normal",
-	Callback = function(v) print("[Mode]", v) end,
-})
-
--- Collapsible Section demo
-local combat = settingsTab:Collapsible("Combat", { DefaultOpen = true })
-combat:Toggle({ Text = "Silent Aim", Description = "Automatically aims at targets", Default = true })
-combat:Checkbox({ Text = "Draw FOV", Default = true })
-combat:Slider({ Text = "FOV", Min = 1, Max = 200, Default = 100, Suffix = "" })
-combat:Dropdown({ Text = "Hit Part", Options = { "Head", "Torso", "Random" }, Default = "Head" })
-
-local visual = settingsTab:Collapsible("Visual")
-visual:Toggle({ Text = "ESP", Description = "Enables ESP rendering", Default = false })
-visual:Checkbox({ Text = "Tracers", Default = true })
-visual:Slider({ Text = "Transparency", Min = 0, Max = 1, Default = 0.5, Suffix = "", Step = 0.1 })
-
--- Tab 3: Info
+-- Tab 4: Info
 local infoTab = menu:Tab({ Text = "Info", Icon = "info" })
 
-infoTab:BoldLabel({
-	Text = "FyyCommunity v" .. FyyUI.Version,
-	Description = "Roblox UI Library",
-})
-
-infoTab:BoldLabel({
-	Text = "Status: Running",
-	Color = Color3.fromRGB(0, 200, 100),
-})
+infoTab:BoldLabel({ Text = "FyyCommunity v" .. FyyUI.Version, Description = "Roblox UI Library" })
+infoTab:BoldLabel({ Text = "Status: Running", Color = Color3.fromRGB(0, 200, 80) })
 
 infoTab:Divider()
 
-infoTab:BoldLabel({ Text = "Sections" })
-infoTab:Label({ Text = "Regular label example" })
-infoTab:Label({ Text = "Another regular label" })
+infoTab:BoldLabel({ Text = "Components" })
+infoTab:Label({ Text = "Toggle, Checkbox, Button" })
+infoTab:Label({ Text = "Slider, Dropdown, Label" })
+infoTab:Label({ Text = "Collapsible Section" })
 
--- Toggle keybind
-game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
-	if gpe then return end
-	if input.KeyCode == Enum.KeyCode.RightShift then
-		menu:ToggleVisibility()
-	end
-end)
+infoTab:Divider()
 
--- Test notifications
-menu:Notify({ Text = "FyyUI loaded successfully!", Duration = 3, Type = "Success" })
-task.wait(3.5)
-menu:Notify({ Text = "Auto Farm is ready", Duration = 2, Type = "Info" })
+infoTab:Button({ Text = "Rejoin Game", Description = "Rejoin the current server", Icon = "refresh-cw", Callback = function() print("Rejoining...") end })
 
-print("FyyUI loaded!")
+print("FyyUI v" .. FyyUI.Version .. " loaded successfully!")
