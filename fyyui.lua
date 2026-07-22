@@ -637,11 +637,11 @@ return (function()
 				end
 				local pos = self.SelectBtn.AbsolutePosition
 				local siz = self.SelectBtn.AbsoluteSize
-				local idx = 0
+				self._selIdx = 0
 				for i, opt in ipairs(self.Options) do
-					if opt == self.Value then idx = i; break end
+					if opt == self.Value then self._selIdx = i; break end
 				end
-				self._menu:ShowDropdownPopup(pos, siz, self.Options, idx, function(idx, val)
+				self._menu:ShowDropdownPopup(pos, siz, self.Options, self._selIdx, function(idx, val)
 					self:SetValue(val)
 				end, self.Multi)
 				self._menu._activeDropdown = self
@@ -705,6 +705,10 @@ return (function()
 		self.Value = v
 		self.SelectText.Text = tostring(v)
 		if self._selectStroke then self._selectStroke.Transparency = 0.5 end
+		self._selIdx = 0
+		for i, opt in ipairs(self.Options) do
+			if opt == v then self._selIdx = i; break end
+		end
 		self.Open = false
 		if self._arrow then self._arrow.Image = self._arrowDown end
 		if self._menu._activeDropdown == self then
@@ -2098,7 +2102,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.27", Theme = Theme }
+	local FyyUI = { Version = "0.9.28", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
