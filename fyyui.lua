@@ -1255,11 +1255,12 @@ return (function()
 		self.Components = {}
 		self.Open = options and options.DefaultOpen ~= false
 		self._tween = nil
+		self._closed = false
 
 		-- Container
 		self.Container = U.Create("Frame", {
 			Name = "Collapsible",
-			Size = UDim2.new(1, -12, 0, 0),
+			Size = UDim2.new(1, -12, 0, 34),
 			Position = UDim2.fromOffset(6, 0),
 			BackgroundColor3 = theme.Element,
 			BackgroundTransparency = 0,
@@ -1280,11 +1281,11 @@ return (function()
 			Parent = self.Container,
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = self.Header })
-		-- Arrow
+		-- Arrow (far right)
 		self.Arrow = U.Create("TextLabel", {
 			Name = "Arrow",
 			Size = UDim2.fromOffset(16, 16),
-			Position = UDim2.fromOffset(10, 9),
+			Position = UDim2.new(1, -24, 0.5, -8),
 			BackgroundTransparency = 1,
 			Text = self.Open and "▼" or "▶",
 			Font = theme.FontBold,
@@ -1292,11 +1293,11 @@ return (function()
 			TextColor3 = theme.TextSecondary,
 			Parent = self.Header,
 		})
-		-- Title
+		-- Title (left, with room for arrow)
 		self.Title = U.Create("TextLabel", {
 			Name = "Title",
 			Size = UDim2.new(1, -40, 1, 0),
-			Position = UDim2.fromOffset(30, 0),
+			Position = UDim2.fromOffset(12, 0),
 			BackgroundTransparency = 1,
 			Text = title,
 			Font = theme.FontBold,
@@ -1321,12 +1322,10 @@ return (function()
 		})
 		self._layout = layout
 
-		-- Track content height changes to resize container
+		-- Resize when content changes
 		self._layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-			self:_updateSize()
+			if not self._closed then self:_updateSize() end
 		end)
-		-- Also update size after any children changes
-		self:_updateSize()
 
 		-- Click header to toggle
 		self.Header.MouseEnter:Connect(function()
@@ -1341,11 +1340,10 @@ return (function()
 			self:Toggle()
 		end)
 
-		-- Initialize height based on open state
-		-- Wait one frame for layout to process
+		-- Initialize height
 		task.spawn(function()
 			task.wait()
-			self:_updateSize(true)
+			if not self._closed then self:_updateSize(true) end
 		end)
 
 		return self
@@ -1355,9 +1353,10 @@ return (function()
 		self.Open = not self.Open
 		self.Arrow.Text = self.Open and "▼" or "▶"
 		if self._tween then self._tween:Cancel() end
+		if not self.Container then return end
 		local ts = game:GetService("TweenService")
 		local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-		local contentH = self._layout.AbsoluteContentSize.Y
+		local contentH = self._layout and self._layout.AbsoluteContentSize.Y or 0
 		local targetH = self.Open and (34 + contentH) or 34
 		self._tween = ts:Create(self.Container, ti, { Size = UDim2.new(1, -12, 0, targetH) }):Play()
 	end
@@ -1365,12 +1364,12 @@ return (function()
 	function Collapsible:Open()
 		if not self.Open then self:Toggle() end
 	end
-
 	function Collapsible:Close()
 		if self.Open then self:Toggle() end
 	end
 
 	function Collapsible:_updateSize(instant)
+		if self._closed or not self._layout or not self.Container then return end
 		if self._tween then self._tween:Cancel() end
 		local contentH = self._layout.AbsoluteContentSize.Y
 		local targetH = self.Open and (34 + contentH) or 34
@@ -1378,15 +1377,15 @@ return (function()
 			self.Container.Size = UDim2.new(1, -12, 0, targetH)
 		else
 			local ts = game:GetService("TweenService")
-			self._tween = ts:Create(self.Container, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(1, -12, 0, targetH) }):Play()
+			self._tween = ts:Create(self.Container, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(1, -12, 0, targetH) }):Play()
 		end
 	end
 
-	-- Pass-through methods for all component types
-	function Collapsible:Toggle(opts) local c = Toggle.new(self.Content, opts, self.Theme); table.insert(self.Components, c); self:_updateSize(); return c end
-	function Collapsible:Checkbox(opts) local c = Checkbox.new(self.Content, opts, self.Theme); table.insert(self.Components, c); self:_updateSize(); return c end
-	function Collapsible:Slider(opts) local c = Slider.new(self.Content, opts, self.Theme); table.insert(self.Components, c); self:_updateSize(); return c end
-	function Collapsible:Dropdown(opts) local c = Dropdown.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); self:_updateSize(); return c end
+	-- Pass-through methods (all default opts to {})
+	function Collapsible:Toggle(opts) opts = opts or {}; local c = Toggle.new(self.Content, opts, self.Theme); table.insert(self.Components, c); self:_updateSize(); return c end
+	function Collapsible:Checkbox(opts) opts = opts or {}; local c = Checkbox.new(self.Content, opts, self.Theme); table.insert(self.Components, c); self:_updateSize(); return c end
+	function Collapsible:Slider(opts) opts = opts or {}; local c = Slider.new(self.Content, opts, self.Theme); table.insert(self.Components, c); self:_updateSize(); return c end
+	function Collapsible:Dropdown(opts) opts = opts or {}; local c = Dropdown.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); self:_updateSize(); return c end
 	function Collapsible:Button(opts)
 		opts = opts or {}
 		local theme = self.Theme
@@ -1397,7 +1396,7 @@ return (function()
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = btn.Container })
 		U.Create("UIStroke", { Color = theme.ElementBorder, Transparency = 0.6, Thickness = 1, Parent = btn.Container })
 		local _ri = resolveIcon(opts.Icon or "mouse-pointer-2")
-		if _ri then U.Create("ImageLabel", { Name = "Pointer", Size = UDim2.fromOffset(42, 42), Position = UDim2.new(1, -48, 0.5, -16), BackgroundTransparency = 1, ImageTransparency = 0.5, Image = _ri.Image, ImageRectSize = _ri.ImageRectSize, ImageRectOffset = _ri.ImageRectOffset, Parent = btn.Container }) end
+		if _ri then U.Create("ImageLabel", { Name = "Pointer", Size = UDim2.fromOffset(42, 42), Position = UDim2.new(1, -48, 0.5, -16), BackgroundTransparency = 1, ImageTransparency = 0.5, Image = _ri.Image, Parent = btn.Container }) end
 		local ix = 10
 		if hasDesc then
 			U.Create("TextLabel", { Name = "Text", Size = UDim2.new(1, -20, 0, 20), Position = UDim2.fromOffset(ix, 5), BackgroundTransparency = 1, Text = opts.Text or "Button", Font = theme.Font, TextSize = theme.FontSize, TextColor3 = opts.Color or theme.TextPrimary, TextXAlignment = Enum.TextXAlignment.Left, Parent = btn.Container })
@@ -1438,8 +1437,10 @@ return (function()
 		lbl.Destroy = function() if lbl.Container then lbl.Container:Destroy() end end
 		table.insert(self.Components, lbl); self:_updateSize(); return lbl
 	end
-	function Collapsible:Divider() local div = {}; div.Container = U.Create("Frame", { Name = "Divider", Size = UDim2.new(1, -20, 0, 1), Position = UDim2.fromOffset(10, 0), BackgroundColor3 = self.Theme.Border, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = self.Content }); table.insert(self.Components, div); self:_updateSize(); return div end
+	function Collapsible:Divider() opts = opts or {}; local div = {}; div.Container = U.Create("Frame", { Name = "Divider", Size = UDim2.new(1, -20, 0, 1), Position = UDim2.fromOffset(10, 0), BackgroundColor3 = self.Theme.Border, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = self.Content }); table.insert(self.Components, div); self:_updateSize(); return div end
 	function Collapsible:Destroy()
+		self._closed = true
+		if self._tween then self._tween:Cancel() end
 		for _, c in ipairs(self.Components) do if c.Destroy then c:Destroy() end end
 		self.Components = {}
 		if self.Container then self.Container:Destroy() end
