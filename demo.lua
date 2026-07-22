@@ -30,7 +30,6 @@ mainTab:Divider()
 mainTab:Button({
 	Text = "Toggle All",
 	Description = "Enable or disable all features",
-	-- Icon gak di-set → default mouse-pointer-2
 	Callback = function() print("Toggle All!") end,
 })
 
@@ -40,6 +39,15 @@ mainTab:Button({
 	Color = Color3.fromRGB(255, 80, 80),
 	Icon = "square",
 	Callback = function() print("Stopped!") end,
+})
+
+mainTab:Divider()
+
+mainTab:Button({
+	Text = "Refresh",
+	Description = "Reload configuration",
+	Icon = "refresh-cw",
+	Callback = function() print("Refreshed!") end,
 })
 
 -- Tab 2: Settings
