@@ -605,7 +605,6 @@ return (function()
 					end
 					self._menu:HideDropdownPopup()
 				end
-				self._menu._activeDropdown = self
 				local pos = self.SelectBtn.AbsolutePosition
 				local siz = self.SelectBtn.AbsoluteSize
 				local idx = 0
@@ -615,6 +614,7 @@ return (function()
 				self._menu:ShowDropdownPopup(pos, siz, self.Options, idx, function(idx, val)
 					self:SetValue(val)
 				end)
+				self._menu._activeDropdown = self
 			end
 		end)
 
@@ -1864,7 +1864,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.13", Theme = Theme }
+	local FyyUI = { Version = "0.9.14", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
