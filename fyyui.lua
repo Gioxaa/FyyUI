@@ -527,7 +527,16 @@ return (function()
 		self.Text = options.Text or "Dropdown"
 		self.Description = options.Description
 		self.Options = options.Options or {}
+		self.Multi = options.Multi or false  -- Multi-Select mode
 		self.Value = options.Default or (self.Options[1] or "")
+		self._selected = {}  -- set of selected values (multi mode)
+		self._selectedCount = 0
+		if self.Multi and type(options.Default) == "table" then
+			for _, v in ipairs(options.Default) do
+				self._selected[v] = true
+				self._selectedCount = self._selectedCount + 1
+			end
+		end
 		self.Callback = options.Callback or function() end
 		self.Theme = theme
 		self.Open = false
@@ -628,7 +637,7 @@ return (function()
 				end
 				self._menu:ShowDropdownPopup(pos, siz, self.Options, idx, function(idx, val)
 					self:SetValue(val)
-				end)
+				end, self.Multi)
 				self._menu._activeDropdown = self
 			end
 		end)
@@ -653,8 +662,33 @@ return (function()
 	end
 
 	function Dropdown:SetValue(v)
+		if self.Multi then
+			-- Multi-select: toggle the value
+			if self._selected[v] then
+				self._selected[v] = nil
+				self._selectedCount = math.max(0, self._selectedCount - 1)
+			else
+				self._selected[v] = true
+				self._selectedCount = self._selectedCount + 1
+			end
+			-- Update display text
+			if self._selectedCount == 0 then
+				self.SelectText.Text = ""
+			elseif self._selectedCount <= 2 then
+				local parts = {}
+				for _, opt in ipairs(self.Options) do
+					if self._selected[opt] then table.insert(parts, opt) end
+				end
+				self.SelectText.Text = table.concat(parts, ", ")
+			else
+				self.SelectText.Text = self._selectedCount .. " selected"
+			end
+			task.spawn(function() self.Callback(self._selected) end)
+			return
+		end
+
+		-- Single-select
 		if v == self.Value then
-			self.Open = false
 			if self._arrow then self._arrow.Image = self._arrowDown end
 			if self._menu._activeDropdown == self then
 				self._menu._activeDropdown = nil
@@ -673,7 +707,16 @@ return (function()
 		task.spawn(function() self.Callback(v) end)
 	end
 
-	function Dropdown:GetValue() return self.Value end
+	function Dropdown:GetValue()
+		if self.Multi then
+			local result = {}
+			for _, opt in ipairs(self.Options) do
+				if self._selected[opt] then table.insert(result, opt) end
+			end
+			return result
+		end
+		return self.Value
+	end
 	function Dropdown:Destroy()
 		if self._menu._activeDropdown == self then
 			self._menu._activeDropdown = nil
@@ -1690,7 +1733,7 @@ return (function()
 		end
 	end
 
-	function Menu:ShowDropdownPopup(atPos, atSize, opts, selectedIdx, onClick)
+	function Menu:ShowDropdownPopup(atPos, atSize, opts, selectedIdx, onClick, isMulti)
 		self:HideDropdownPopup()
 
 		local uis = game:GetService("UserInputService")
@@ -1702,6 +1745,7 @@ return (function()
 		local px = frameSiz.X
 		local py = 0
 		local panelH = frameSiz.Y
+		isMulti = isMulti or false
 
 		-- Create popup with 0 width → tween to slide in from right
 		local popup = U.Create("Frame", {
@@ -1735,7 +1779,7 @@ return (function()
 			PaddingRight = UDim.new(0, 4),
 			Parent = content,
 		})
-		U.Create("UIListLayout", {
+		local listLayout = U.Create("UIListLayout", {
 			Padding = UDim.new(0, 2),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Parent = content,
@@ -1753,9 +1797,75 @@ return (function()
 			Parent = popup,
 		})
 
+		-- Multi-Select: add Select All / Clear All
+		if self._activeDropdown and self._activeDropdown.Multi then
+			isMulti = true
+			local allSelected = true
+			for _, opt in ipairs(opts) do
+				if not self._activeDropdown._selected[opt] then allSelected = false; break end
+			end
+			local actionBtn = U.Create("TextButton", {
+				Name = "ActionBtn",
+				Size = UDim2.new(1, -8, 0, 28),
+				Text = "",
+				BackgroundColor3 = theme.Accent,
+				BackgroundTransparency = 0.5,
+				AutoButtonColor = false,
+				ZIndex = 10001,
+				Parent = content,
+			})
+			U.Create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = actionBtn })
+			local actionLabel = U.Create("TextLabel", {
+				Name = "Label",
+				Size = UDim2.new(1, -20, 1, 0),
+				Position = UDim2.fromOffset(10, 0),
+				BackgroundTransparency = 1,
+				Text = allSelected and "Clear All" or "Select All",
+				Font = theme.FontBold,
+				TextSize = theme.FontSizeSmall,
+				TextColor3 = theme.TextPrimary,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				ZIndex = 10002,
+				Parent = actionBtn,
+			})
+			local actionCallback = function()
+				local dd = self._activeDropdown
+				if not dd then return end
+				if allSelected then
+					dd._selected = {}
+					dd._selectedCount = 0
+				else
+					for _, opt in ipairs(opts) do
+						dd._selected[opt] = true
+					end
+					dd._selectedCount = #opts
+				end
+				if dd._selectedCount == 0 then
+					dd.SelectText.Text = ""
+				elseif dd._selectedCount <= 2 then
+					local parts = {}
+					for _, o in ipairs(opts) do
+						if dd._selected[o] then table.insert(parts, o) end
+					end
+					dd.SelectText.Text = table.concat(parts, ", ")
+				else
+					dd.SelectText.Text = dd._selectedCount .. " selected"
+				end
+				-- Refresh popup
+				if self._activeDropdown == dd then
+					self:ShowDropdownPopup(atPos, atSize, opts, selectedIdx, onClick, true)
+				end
+				task.spawn(function() dd.Callback(dd:GetValue()) end)
+			end
+			actionBtn.MouseButton1Click:Connect(actionCallback)
+		end
+
 		-- Create option buttons
 		for i, opt in ipairs(opts) do
 			local sel = i == selectedIdx
+			if isMulti then
+				sel = self._activeDropdown and self._activeDropdown._selected[opt] or false
+			end
 			local btn = U.Create("TextButton", {
 				Name = "Option",
 				Size = UDim2.new(1, -8, 0, 32),
@@ -1767,10 +1877,11 @@ return (function()
 				Parent = content,
 			})
 			U.Create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = btn })
+			local textOffset = isMulti and 28 or 10
 			U.Create("TextLabel", {
 				Name = "Label",
-				Size = UDim2.new(1, -14, 1, 0),
-				Position = UDim2.fromOffset(10, 0),
+				Size = UDim2.new(1, -(textOffset + 4), 1, 0),
+				Position = UDim2.fromOffset(textOffset, 0),
 				BackgroundTransparency = 1,
 				Text = tostring(opt),
 				Font = theme.Font,
@@ -1780,9 +1891,32 @@ return (function()
 				ZIndex = 10002,
 				Parent = btn,
 			})
+			-- Multi-Select checkmark
+			if isMulti and sel then
+				U.Create("TextLabel", {
+					Name = "Check",
+					Size = UDim2.fromOffset(16, 16),
+					Position = UDim2.fromOffset(6, 0.5, -8),
+					BackgroundTransparency = 1,
+					Text = "✓",
+					Font = theme.FontBold,
+					TextSize = 14,
+					TextColor3 = theme.TextPrimary,
+					ZIndex = 10002,
+					Parent = btn,
+				})
+			end
 			btn.MouseButton1Click:Connect(function()
-				onClick(i, opt)
-				self:HideDropdownPopup()
+				if isMulti then
+					if self._activeDropdown then
+						self._activeDropdown:SetValue(opt)
+						-- Refresh popup to update checkmarks
+						self:ShowDropdownPopup(atPos, atSize, opts, selectedIdx, onClick, true)
+					end
+				else
+					onClick(i, opt)
+					self:HideDropdownPopup()
+				end
 			end)
 			btn.MouseEnter:Connect(function()
 				if not sel then
@@ -2016,7 +2150,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.23", Theme = Theme }
+	local FyyUI = { Version = "0.9.24", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
