@@ -1901,14 +1901,18 @@ return (function()
 				end
 			end)
 			btn.MouseEnter:Connect(function()
-				btn.BackgroundColor3 = theme.Accent
-				btn.BackgroundTransparency = 0.45
+				local curSel = isMulti and (dd and dd._selected[opt]) or (dd and tostring(opt) == tostring(dd.Value))
+				if curSel then
+					btn.BackgroundTransparency = 0.05  -- brighter when hovered over selected
+				else
+					btn.BackgroundColor3 = theme.Accent
+					btn.BackgroundTransparency = 0.45
+				end
 			end)
 			btn.MouseLeave:Connect(function()
 				local curSel = isMulti and (dd and dd._selected[opt]) or (dd and tostring(opt) == tostring(dd.Value))
 				if curSel then
-					btn.BackgroundColor3 = theme.Accent
-					btn.BackgroundTransparency = 0.15
+					btn.BackgroundTransparency = 0.15  -- back to normal selected
 				else
 					btn.BackgroundColor3 = theme.Element
 					btn.BackgroundTransparency = 0.8
@@ -2138,7 +2142,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.34", Theme = Theme }
+	local FyyUI = { Version = "0.9.33", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
