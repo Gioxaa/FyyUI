@@ -44,8 +44,8 @@ return (function()
 			Padding = 10,
 			CornerRadius = 8,
 			TopbarHeight = 44,
-			ElementHeight = 32,
-			DescHeight = 48,
+			ElementHeight = 36,
+			DescHeight = 52,
 			Spacing = 6,
 			SidebarWidth = 150,
 		},
@@ -81,8 +81,8 @@ return (function()
 			Padding = 10,
 			CornerRadius = 8,
 			TopbarHeight = 44,
-			ElementHeight = 32,
-			DescHeight = 48,
+			ElementHeight = 36,
+			DescHeight = 52,
 			Spacing = 6,
 			SidebarWidth = 150,
 		},
@@ -118,8 +118,8 @@ return (function()
 			Padding = 10,
 			CornerRadius = 8,
 			TopbarHeight = 44,
-			ElementHeight = 32,
-			DescHeight = 48,
+			ElementHeight = 36,
+			DescHeight = 52,
 			Spacing = 6,
 			SidebarWidth = 150,
 		},
@@ -2137,7 +2137,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.36", Theme = Theme }
+	local FyyUI = { Version = "0.9.37", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
