@@ -528,7 +528,13 @@ return (function()
 		self.Description = options.Description
 		self.Options = options.Options or {}
 		self.Multi = options.Multi or false  -- Multi-Select mode
-		self.Value = options.Default or (self.Options[1] or "")
+		self.Value = ""  -- start empty; use Default to pre-select
+		if options.Default ~= nil then
+			self.Value = options.Default
+		elseif self.Options[1] and not options.Placeholder then
+			self.Value = self.Options[1]  -- backward compat: auto-select first
+		end
+		self.Placeholder = options.Placeholder or "Not selected"
 		self._selected = {}  -- set of selected values (multi mode)
 		self._selectedCount = 0
 		if self.Multi and type(options.Default) == "table" then
@@ -592,7 +598,7 @@ return (function()
 			Size = UDim2.new(1, -26, 1, 0),
 			Position = UDim2.fromOffset(10, 0),
 			BackgroundTransparency = 1,
-			Text = (self.Value and self.Value ~= "") and tostring(self.Value) or "Not selected",
+			Text = (self.Value and self.Value ~= "") and tostring(self.Value) or self.Placeholder,
 			TextColor3 = (self.Value and self.Value ~= "") and theme.TextPrimary or theme.TextMuted,
 			Font = theme.Font,
 			TextSize = theme.FontSize,
@@ -1837,7 +1843,7 @@ return (function()
 				Size = UDim2.new(1, -8, 0, 32),
 				Text = "",
 				BackgroundColor3 = sel and theme.Accent or theme.Element,
-				BackgroundTransparency = sel and 0.15 or 0.6,
+				BackgroundTransparency = sel and 0.15 or 0.8,
 				AutoButtonColor = false,
 				ZIndex = 10001,
 				Parent = content,
@@ -1875,14 +1881,14 @@ return (function()
 				local curSel = isMulti and (dd and dd._selected[opt]) or (dd and tostring(opt) == tostring(dd.Value))
 				if not curSel then
 					btn.BackgroundColor3 = theme.Accent
-					btn.BackgroundTransparency = 0.5
+					btn.BackgroundTransparency = 0.45
 				end
 			end)
 			btn.MouseLeave:Connect(function()
 				local curSel = isMulti and (dd and dd._selected[opt]) or (dd and tostring(opt) == tostring(dd.Value))
 				if not curSel then
 					btn.BackgroundColor3 = theme.Element
-					btn.BackgroundTransparency = 0.6
+					btn.BackgroundTransparency = 0.8
 				end
 			end)
 			options[#options + 1] = btn
@@ -2109,7 +2115,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.30", Theme = Theme }
+	local FyyUI = { Version = "0.9.31", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
