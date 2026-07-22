@@ -2135,14 +2135,15 @@ return (function()
 		local tiOpen = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 		local tiClose = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 
-		-- Overlay
-		local overlay = U.Create("Frame", {
+		-- Modal overlay (blocks all clicks behind it)
+		local overlay = U.Create("ImageButton", {
 			Name = "ConfirmOverlay",
 			Size = UDim2.new(1, 0, 1, 0),
 			BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			ZIndex = 998,
+			AutoButtonColor = false,
 			Parent = frame,
 		})
 
@@ -2178,7 +2179,7 @@ return (function()
 			Size = UDim2.new(1, -20, 0, 40),
 			Position = UDim2.fromOffset(10, 18),
 			BackgroundTransparency = 1,
-			Text = "Close FyyUI?",
+			Text = "Close Menu?",
 			Font = theme.FontBold,
 			TextSize = 20,
 			TextColor3 = theme.TextPrimary,
@@ -2200,47 +2201,45 @@ return (function()
 			Parent = popup,
 		})
 
-		-- Buttons
+		-- Buttons with UIScale for clean press effect
 		local btnW, btnH = 100, 30
 		local btnY = 85
 
 		local function makeBtn(text, xOff, defColor, hovColor, clickCb)
-			local b = U.Create("TextButton", {
+			local b = U.Create("ImageButton", {
 				Size = UDim2.fromOffset(btnW, btnH),
 				Position = UDim2.fromOffset(xOff, btnY),
 				BackgroundColor3 = defColor,
 				BackgroundTransparency = 0.25,
-				Text = text,
-				Font = theme.FontBold,
-				TextSize = 15,
-				TextColor3 = Color3.fromRGB(255,255,255),
 				AutoButtonColor = false,
 				ZIndex = 1000,
 				Parent = popup,
 			})
 			U.Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = b })
-			local hovering = false
+			local bScale = U.Create("UIScale", { Parent = b, Scale = 1 })
+			U.Create("TextLabel", {
+				Size = UDim2.new(1, 0, 1, 0),
+				BackgroundTransparency = 1,
+				Text = text,
+				Font = theme.FontBold,
+				TextSize = 15,
+				TextColor3 = Color3.fromRGB(255,255,255),
+				ZIndex = 1001,
+				Parent = b,
+			})
+			-- Hover
 			b.MouseEnter:Connect(function()
-				hovering = true
-				ts:Create(b, TweenInfo.new(0.12), {
-					BackgroundColor3 = hovColor,
-					BackgroundTransparency = 0.05,
-					Size = UDim2.fromOffset(btnW + 4, btnH + 2),
-				}):Play()
+				ts:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = hovColor, BackgroundTransparency = 0.05 }):Play()
 			end)
 			b.MouseLeave:Connect(function()
-				hovering = false
-				ts:Create(b, TweenInfo.new(0.15), {
-					BackgroundColor3 = defColor,
-					BackgroundTransparency = 0.25,
-					Size = UDim2.fromOffset(btnW, btnH),
-				}):Play()
+				ts:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = defColor, BackgroundTransparency = 0.25 }):Play()
 			end)
+			-- Press via UIScale (doesn't affect layout)
 			b.MouseButton1Down:Connect(function()
-				ts:Create(b, TweenInfo.new(0.06), { Size = UDim2.fromOffset(btnW - 4, btnH - 2) }):Play()
+				ts:Create(bScale, TweenInfo.new(0.06), { Scale = 0.95 }):Play()
 			end)
 			b.MouseButton1Up:Connect(function()
-				ts:Create(b, TweenInfo.new(0.1), { Size = UDim2.fromOffset(btnW, btnH) }):Play()
+				ts:Create(bScale, TweenInfo.new(0.1), { Scale = 1 }):Play()
 			end)
 			b.MouseButton1Click:Connect(clickCb)
 			return b
@@ -2252,16 +2251,16 @@ return (function()
 		overlay.BackgroundTransparency = 1
 		popup.Size = UDim2.fromOffset(200, 100)
 		popup.BackgroundTransparency = 0.5
-		local scale = U.Create("UIScale", { Parent = popup, Scale = 0.8 })
+		local popupScale = U.Create("UIScale", { Parent = popup, Scale = 0.8 })
 		ts:Create(overlay, tiOpen, { BackgroundTransparency = 0.5 }):Play()
-		ts:Create(scale, tiOpen, { Scale = 1 }):Play()
+		ts:Create(popupScale, tiOpen, { Scale = 1 }):Play()
 		ts:Create(popup, tiOpen, {
 			Size = UDim2.fromOffset(260, 130),
 			BackgroundTransparency = 0.1,
 		}):Play()
 
 		local function closePopup(cb)
-			ts:Create(scale, tiClose, { Scale = 0.85 }):Play()
+			ts:Create(popupScale, tiClose, { Scale = 0.85 }):Play()
 			ts:Create(overlay, tiClose, { BackgroundTransparency = 1 }):Play()
 			ts:Create(popup, tiClose, {
 				Size = UDim2.fromOffset(200, 100),
@@ -2293,7 +2292,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.40", Theme = Theme }
+	local FyyUI = { Version = "0.9.41", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
