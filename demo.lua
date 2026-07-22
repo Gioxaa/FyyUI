@@ -1,14 +1,4 @@
-local FyyUI = (function()
-	local ok, result = pcall(function()
-		return loadstring(game:HttpGet("https://raw.githubusercontent.com/FyyWannaFly/FyyUI/main/fyyui.lua"))()
-	end)
-	if ok then return result end
-	ok, result = pcall(function()
-		return loadstring(game:GetService("HttpService"):GetAsync("https://raw.githubusercontent.com/FyyWannaFly/FyyUI/main/fyyui.lua"))()
-	end)
-	if ok then return result end
-	error("Failed to load FyyUI")
-end)()
+local FyyUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FyyWannaFly/FyyUI/main/fyyui.lua"))()
 
 local menu = FyyUI.Menu({
 	Title = "FyyCommunity",
@@ -40,6 +30,7 @@ mainTab:Divider()
 mainTab:Button({
 	Text = "Toggle All",
 	Description = "Enable or disable all features",
+	Pointer = "toggle-right",
 	Callback = function() print("Toggle All!") end,
 })
 
@@ -47,6 +38,7 @@ mainTab:Button({
 	Text = "Stop",
 	Description = "Stops all automation",
 	Color = Color3.fromRGB(255, 80, 80),
+	Pointer = "square",
 	Callback = function() print("Stopped!") end,
 })
 

@@ -639,6 +639,7 @@ return (function()
 	function Dropdown:SetValue(v)
 		if v == self.Value then
 			self.Open = false
+			if self._arrow then self._arrow.Image = self._arrowDown end
 			if self._menu._activeDropdown == self then
 				self._menu._activeDropdown = nil
 				self._menu:HideDropdownPopup()
@@ -648,6 +649,7 @@ return (function()
 		self.Value = v
 		self.SelectText.Text = tostring(v)
 		self.Open = false
+		if self._arrow then self._arrow.Image = self._arrowDown end
 		if self._menu._activeDropdown == self then
 			self._menu._activeDropdown = nil
 			self._menu:HideDropdownPopup()
@@ -814,15 +816,21 @@ return (function()
 			})
 		end
 
-		-- Right-side icon (mouse-pointer-2)
-		U.Create("ImageLabel", {
-			Name = "Pointer",
-			Size = UDim2.fromOffset(21, 21),
-			Position = UDim2.new(1, -28, 0.5, -10),
-			BackgroundTransparency = 1,
-			Image = "rbxassetid://117093892862228",
-			Parent = btn.Container,
-		})
+		-- Right-side icon (default: mouse-pointer-2, customizable via options.Pointer)
+		local _ptrProps = resolveIcon(options.Pointer or "mouse-pointer-2")
+		if _ptrProps then
+			U.Create("ImageLabel", {
+				Name = "Pointer",
+				Size = UDim2.fromOffset(42, 42),
+				Position = UDim2.new(1, -48, 0.5, -21),
+				BackgroundTransparency = 1,
+				ImageTransparency = 0.3,
+				Image = _ptrProps.Image,
+				ImageRectSize = _ptrProps.ImageRectSize,
+				ImageRectOffset = _ptrProps.ImageRectOffset,
+				Parent = btn.Container,
+			})
+		end
 
 		if hasDesc then
 			U.Create("TextLabel", {
@@ -1863,7 +1871,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.15", Theme = Theme }
+	local FyyUI = { Version = "0.9.16", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
