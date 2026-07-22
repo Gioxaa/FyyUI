@@ -1162,19 +1162,32 @@ return (function()
 			macBtn("Close", btnColors.Close, function() self:SetVisible(false) end)
 			macBtn("Minimize", btnColors.Minimize, function()
 				self.Minimized = not self.Minimized
+				local ts = game:GetService("TweenService")
+				local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut)
 				if self.Minimized then
 					self._minPrevSize = self.Frame.Size
 					self._minPrevPos = self.Frame.Position
-					if self._minGui then
-						self._minFrame.Position = UDim2.new(0, 12, 0.5, -25)
-						self._minGui.Enabled = true
-						self._minGui.Parent = game:GetService("CoreGui")
-					end
-					self.Gui.Enabled = false
+					ts:Create(self.Frame, ti, {
+						Size = UDim2.fromOffset(60, 60),
+						Position = UDim2.new(0, 12, 0.5, -30),
+					}):Play()
+					task.delay(0.2, function()
+						if not self.Minimized then return end
+						if self._minGui then
+							self._minFrame.Position = UDim2.new(0, 12, 0.5, -25)
+							self._minGui.Enabled = true
+							self._minGui.Parent = game:GetService("CoreGui")
+						end
+						self.Gui.Enabled = false
+					end)
 				else
-					self.Frame.Size = self._minPrevSize or UDim2.fromOffset(size.X, size.Y)
-					self.Frame.Position = self._minPrevPos or pos
+					self.Frame.Size = UDim2.fromOffset(60, 60)
+					self.Frame.Position = UDim2.new(0, 12, 0.5, -30)
 					self.Gui.Enabled = true
+					ts:Create(self.Frame, ti, {
+						Size = self._minPrevSize or UDim2.fromOffset(size.X, size.Y),
+						Position = self._minPrevPos or pos,
+					}):Play()
 					if self._minGui then self._minGui.Enabled = false end
 				end
 			end)
@@ -1185,15 +1198,21 @@ return (function()
 					self.Minimized = false
 					if self._minGui then self._minGui.Enabled = false end
 				end
+				local ts = game:GetService("TweenService")
+				local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 				if self.Maximized then
 					self._maxPrevPos = self.Frame.Position
 					self._maxPrevSize = self.Frame.Size
 		local vs = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
-					self.Frame.Size = UDim2.fromOffset(vs.X - 40, vs.Y - 40)
-					self.Frame.Position = UDim2.fromOffset(20, 20)
+					ts:Create(self.Frame, ti, {
+						Size = UDim2.fromOffset(vs.X - 40, vs.Y - 40),
+						Position = UDim2.fromOffset(20, 20),
+					}):Play()
 				else
-					self.Frame.Position = self._maxPrevPos or pos
-					self.Frame.Size = self._maxPrevSize or UDim2.fromOffset(size.X, size.Y)
+					ts:Create(self.Frame, ti, {
+						Size = self._maxPrevSize or UDim2.fromOffset(size.X, size.Y),
+						Position = self._maxPrevPos or pos,
+					}):Play()
 				end
 				if self._updateShadow then self._updateShadow() end
 			end)
@@ -1238,41 +1257,72 @@ return (function()
 				b.MouseButton1Click:Connect(action)
 				return b
 			end
+			-- Helper: reset window button hover states
+			local function resetWinHover()
+				for _, child in ipairs(self.Topbar:GetChildren()) do
+					if child:IsA("ImageButton") then
+						child.BackgroundTransparency = 1
+						local ic = child:FindFirstChild("Icon")
+						if ic then ic.ImageColor3 = Color3.fromRGB(150, 150, 165) end
+					end
+				end
+			end
 			winBtn("Close", function() self:SetVisible(false) end, -36, Color3.fromRGB(200, 60, 60))
 			winBtn("Maximize", function()
 				self.Maximized = not self.Maximized
 				self.Gui.Enabled = true
+				resetWinHover()
 				if self.Minimized then
 					self.Minimized = false
 					if self._minGui then self._minGui.Enabled = false end
 				end
+				local ts = game:GetService("TweenService")
+				local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 				if self.Maximized then
 					self._maxPrevPos = self.Frame.Position
 					self._maxPrevSize = self.Frame.Size
 					local vs = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
-					self.Frame.Size = UDim2.fromOffset(vs.X - 40, vs.Y - 40)
-					self.Frame.Position = UDim2.fromOffset(20, 20)
+					ts:Create(self.Frame, ti, {
+						Size = UDim2.fromOffset(vs.X - 40, vs.Y - 40),
+						Position = UDim2.fromOffset(20, 20),
+					}):Play()
 				else
-					self.Frame.Position = self._maxPrevPos or pos
-					self.Frame.Size = self._maxPrevSize or UDim2.fromOffset(size.X, size.Y)
+					ts:Create(self.Frame, ti, {
+						Size = self._maxPrevSize or UDim2.fromOffset(size.X, size.Y),
+						Position = self._maxPrevPos or pos,
+					}):Play()
 				end
 				if self._updateShadow then self._updateShadow() end
 			end, -66, Color3.fromRGB(45, 45, 55))
 			winBtn("Minimize", function()
 				self.Minimized = not self.Minimized
+				local ts = game:GetService("TweenService")
+				local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut)
 				if self.Minimized then
 					self._minPrevSize = self.Frame.Size
 					self._minPrevPos = self.Frame.Position
-					if self._minGui then
-						self._minFrame.Position = UDim2.new(0, 12, 0.5, -25)
-						self._minGui.Enabled = true
-						self._minGui.Parent = game:GetService("CoreGui")
-					end
-					self.Gui.Enabled = false
+					ts:Create(self.Frame, ti, {
+						Size = UDim2.fromOffset(60, 60),
+						Position = UDim2.new(0, 12, 0.5, -30),
+					}):Play()
+					task.delay(0.2, function()
+						if not self.Minimized then return end
+						if self._minGui then
+							self._minFrame.Position = UDim2.new(0, 12, 0.5, -25)
+							self._minGui.Enabled = true
+							self._minGui.Parent = game:GetService("CoreGui")
+						end
+						self.Gui.Enabled = false
+					end)
 				else
-					self.Frame.Size = self._minPrevSize or UDim2.fromOffset(size.X, size.Y)
-					self.Frame.Position = self._minPrevPos or pos
+					resetWinHover()
+					self.Frame.Size = UDim2.fromOffset(60, 60)
+					self.Frame.Position = UDim2.new(0, 12, 0.5, -30)
 					self.Gui.Enabled = true
+					ts:Create(self.Frame, ti, {
+						Size = self._minPrevSize or UDim2.fromOffset(size.X, size.Y),
+						Position = self._minPrevPos or pos,
+					}):Play()
 					if self._minGui then self._minGui.Enabled = false end
 				end
 			end, -96, Color3.fromRGB(45, 45, 55))
@@ -1539,12 +1589,18 @@ return (function()
 					)
 				end
 			end)
-			-- Click to restore
+			-- Click to restore with smooth animation
 			self._minFrame.MouseButton1Click:Connect(function()
 				self.Minimized = false
+				local ts = game:GetService("TweenService")
+				local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+				self.Frame.Size = UDim2.fromOffset(60, 60)
+				self.Frame.Position = UDim2.new(0, 12, 0.5, -30)
 				self.Gui.Enabled = true
-				self.Frame.Size = self._minPrevSize or UDim2.fromOffset(size.X, size.Y)
-				self.Frame.Position = self._minPrevPos or pos
+				ts:Create(self.Frame, ti, {
+					Size = self._minPrevSize or UDim2.fromOffset(size.X, size.Y),
+					Position = self._minPrevPos or pos,
+				}):Play()
 				if self._minGui then self._minGui.Enabled = false end
 			end)
 		end
@@ -1936,7 +1992,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.20", Theme = Theme }
+	local FyyUI = { Version = "0.9.21", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
