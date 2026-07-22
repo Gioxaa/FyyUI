@@ -805,7 +805,7 @@ return (function()
 			U.Create("ImageLabel", {
 				Name = "Pointer",
 				Size = UDim2.fromOffset(42, 42),
-				Position = UDim2.new(1, -48, 0.5, -26),
+				Position = UDim2.new(1, -48, 0.5, -16),
 				BackgroundTransparency = 1,
 				ImageTransparency = 0.5,
 				Image = _rightIcon.Image,
