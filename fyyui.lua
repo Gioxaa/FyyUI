@@ -924,13 +924,16 @@ return (function()
 			btn.Container.BackgroundColor3 = theme.Element
 			btn.Container.BackgroundTransparency = 0
 		end)
+		btn._tweenSz = nil
 		btn.Container.MouseButton1Down:Connect(function()
+			if btn._tweenSz then btn._tweenSz:Cancel() end
 			btn.Container.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-			btn.Container:TweenSize(UDim2.new(1, -14, 0, (h + 8) - 2), Enum.EasingDirection.Out, 0.05, true)
+			btn._tweenSz = btn.Container:TweenSize(UDim2.new(1, -14, 0, (h + 8) - 2), Enum.EasingDirection.Out, 0.05, true)
 		end)
 		btn.Container.MouseButton1Up:Connect(function()
+			if btn._tweenSz then btn._tweenSz:Cancel() end
 			btn.Container.BackgroundColor3 = theme.ElementHover
-			btn.Container:TweenSize(UDim2.new(1, -12, 0, h + 8), Enum.EasingDirection.Out, 0.08, true)
+			btn._tweenSz = btn.Container:TweenSize(UDim2.new(1, -12, 0, h + 8), Enum.EasingDirection.Out, 0.08, true)
 		end)
 		btn.Container.MouseButton1Click:Connect(function() if options.Callback then options.Callback() end end)
 		btn.SetText = function(text)
@@ -1241,7 +1244,7 @@ return (function()
 					task.delay(0.2, function()
 						if not self.Minimized then return end
 						if self._minGui then
-							self._minFrame.Position = UDim2.new(0, 12, 0.5, -25)
+							self._minFrame.Position = self._minSavedPos or UDim2.new(0, 12, 0.5, -25)
 							self._minGui.Enabled = true
 							self._minGui.Parent = game:GetService("CoreGui")
 						end
@@ -1375,7 +1378,7 @@ return (function()
 					task.delay(0.2, function()
 						if not self.Minimized then return end
 						if self._minGui then
-							self._minFrame.Position = UDim2.new(0, 12, 0.5, -25)
+							self._minFrame.Position = self._minSavedPos or UDim2.new(0, 12, 0.5, -25)
 							self._minGui.Enabled = true
 							self._minGui.Parent = game:GetService("CoreGui")
 						end
@@ -1633,11 +1636,12 @@ return (function()
 			})
 			U.Create("UICorner", { CornerRadius = UDim.new(0, 10), Parent = minIcon })
 
-			-- Dragging
-			local dragging, dragStart, startPos
+			-- Dragging with click/drag distinction
+			local dragging, dragStart, startPos, didDrag, _inputChangedCon
 			self._minFrame.InputBegan:Connect(function(i)
 				if i.UserInputType == Enum.UserInputType.MouseButton1 then
 					dragging = true
+					didDrag = false
 					dragStart = i.Position
 					startPos = self._minFrame.Position
 				end
@@ -1645,30 +1649,32 @@ return (function()
 			self._minFrame.InputEnded:Connect(function(i)
 				if i.UserInputType == Enum.UserInputType.MouseButton1 then
 					dragging = false
+					-- If didn't drag (click), restore menu
+					if not didDrag then
+						self.Minimized = false
+						local ts = game:GetService("TweenService")
+						local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+						self.Frame.Size = UDim2.fromOffset(60, 60)
+						self.Frame.Position = UDim2.new(0, 12, 0.5, -30)
+						self.Gui.Enabled = true
+						ts:Create(self.Frame, ti, {
+							Size = self._minPrevSize or UDim2.fromOffset(size.X, size.Y),
+							Position = self._minPrevPos or pos,
+						}):Play()
+						if self._minGui then self._minGui.Enabled = false end
+					end
 				end
 			end)
-			game:GetService("UserInputService").InputChanged:Connect(function(i)
+			_inputChangedCon = game:GetService("UserInputService").InputChanged:Connect(function(i)
 				if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
 					local delta = i.Position - dragStart
+					if delta.Magnitude > 5 then didDrag = true end
 					self._minFrame.Position = UDim2.new(
 						startPos.X.Scale, startPos.X.Offset + delta.X,
 						startPos.Y.Scale, startPos.Y.Offset + delta.Y
 					)
+					self._minSavedPos = self._minFrame.Position
 				end
-			end)
-			-- Click to restore with smooth animation
-			self._minFrame.MouseButton1Click:Connect(function()
-				self.Minimized = false
-				local ts = game:GetService("TweenService")
-				local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-				self.Frame.Size = UDim2.fromOffset(60, 60)
-				self.Frame.Position = UDim2.new(0, 12, 0.5, -30)
-				self.Gui.Enabled = true
-				ts:Create(self.Frame, ti, {
-					Size = self._minPrevSize or UDim2.fromOffset(size.X, size.Y),
-					Position = self._minPrevPos or pos,
-				}):Play()
-				if self._minGui then self._minGui.Enabled = false end
 			end)
 		end
 
@@ -1797,74 +1803,14 @@ return (function()
 			Parent = popup,
 		})
 
-		-- Multi-Select: add Select All / Clear All
-		if self._activeDropdown and self._activeDropdown.Multi then
-			isMulti = true
-			local allSelected = true
-			for _, opt in ipairs(opts) do
-				if not self._activeDropdown._selected[opt] then allSelected = false; break end
-			end
-			local actionBtn = U.Create("TextButton", {
-				Name = "ActionBtn",
-				Size = UDim2.new(1, -8, 0, 28),
-				Text = "",
-				BackgroundColor3 = theme.Accent,
-				BackgroundTransparency = 0.5,
-				AutoButtonColor = false,
-				ZIndex = 10001,
-				Parent = content,
-			})
-			U.Create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = actionBtn })
-			local actionLabel = U.Create("TextLabel", {
-				Name = "Label",
-				Size = UDim2.new(1, -20, 1, 0),
-				Position = UDim2.fromOffset(10, 0),
-				BackgroundTransparency = 1,
-				Text = allSelected and "Clear All" or "Select All",
-				Font = theme.FontBold,
-				TextSize = theme.FontSizeSmall,
-				TextColor3 = theme.TextPrimary,
-				TextXAlignment = Enum.TextXAlignment.Left,
-				ZIndex = 10002,
-				Parent = actionBtn,
-			})
-			local actionCallback = function()
-				local dd = self._activeDropdown
-				if not dd then return end
-				if allSelected then
-					dd._selected = {}
-					dd._selectedCount = 0
-				else
-					for _, opt in ipairs(opts) do
-						dd._selected[opt] = true
-					end
-					dd._selectedCount = #opts
-				end
-				if dd._selectedCount == 0 then
-					dd.SelectText.Text = ""
-				elseif dd._selectedCount <= 2 then
-					local parts = {}
-					for _, o in ipairs(opts) do
-						if dd._selected[o] then table.insert(parts, o) end
-					end
-					dd.SelectText.Text = table.concat(parts, ", ")
-				else
-					dd.SelectText.Text = dd._selectedCount .. " selected"
-				end
-				-- Refresh popup
-				if self._activeDropdown == dd then
-					self:ShowDropdownPopup(atPos, atSize, opts, selectedIdx, onClick, true)
-				end
-				task.spawn(function() dd.Callback(dd:GetValue()) end)
-			end
-			actionBtn.MouseButton1Click:Connect(actionCallback)
-		end
-
 		-- Create option buttons
+		local options = {}
 		for i, opt in ipairs(opts) do
-			local sel = i == selectedIdx
+			local sel = false
 			if isMulti then
 				sel = self._activeDropdown and self._activeDropdown._selected[opt] or false
+			else
+				sel = i == selectedIdx
 			end
 			local btn = U.Create("TextButton", {
 				Name = "Option",
@@ -1892,13 +1838,13 @@ return (function()
 				Parent = btn,
 			})
 			-- Multi-Select checkmark
-			if isMulti and sel then
-				U.Create("TextLabel", {
+			if isMulti then
+				local check = U.Create("TextLabel", {
 					Name = "Check",
 					Size = UDim2.fromOffset(16, 16),
 					Position = UDim2.fromOffset(6, 0.5, -8),
 					BackgroundTransparency = 1,
-					Text = "✓",
+					Text = sel and "✓" or "",
 					Font = theme.FontBold,
 					TextSize = 14,
 					TextColor3 = theme.TextPrimary,
@@ -1910,8 +1856,12 @@ return (function()
 				if isMulti then
 					if self._activeDropdown then
 						self._activeDropdown:SetValue(opt)
-						-- Refresh popup to update checkmarks
-						self:ShowDropdownPopup(atPos, atSize, opts, selectedIdx, onClick, true)
+						-- Update this button's state in-place (no popup refresh)
+						local isSel = self._activeDropdown._selected[opt]
+						btn.BackgroundColor3 = isSel and theme.Accent or Color3.new(0,0,0)
+						btn.BackgroundTransparency = isSel and 0.15 or 1
+						local check = btn:FindFirstChild("Check")
+						if check then check.Text = isSel and "✓" or "" end
 					end
 				else
 					onClick(i, opt)
@@ -1928,6 +1878,74 @@ return (function()
 				if not sel then
 					btn.BackgroundTransparency = 1
 				end
+			end)
+			options[#options + 1] = btn
+		end
+
+		-- Multi-Select: Select All / Clear All (added at end so it's below options)
+		if isMulti then
+			local allSel = true
+			for _, opt in ipairs(opts) do
+				if not (self._activeDropdown and self._activeDropdown._selected[opt]) then allSel = false; break end
+			end
+			local actionBtn = U.Create("TextButton", {
+				Name = "ActionBtn",
+				Size = UDim2.new(1, -8, 0, 28),
+				Text = "",
+				BackgroundColor3 = theme.Accent,
+				BackgroundTransparency = 0.5,
+				AutoButtonColor = false,
+				ZIndex = 10001,
+				Parent = content,
+			})
+			U.Create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = actionBtn })
+			local actionLabel = U.Create("TextLabel", {
+				Name = "Label",
+				Size = UDim2.new(1, -20, 1, 0),
+				Position = UDim2.fromOffset(10, 0),
+				BackgroundTransparency = 1,
+				Text = allSel and "Clear All" or "Select All",
+				Font = theme.FontBold,
+				TextSize = theme.FontSizeSmall,
+				TextColor3 = theme.TextPrimary,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				ZIndex = 10002,
+				Parent = actionBtn,
+			})
+			actionBtn.MouseButton1Click:Connect(function()
+				local dd = self._activeDropdown
+				if not dd then return end
+				-- Toggle all
+				if allSel then
+					dd._selected = {}
+					dd._selectedCount = 0
+				else
+					for _, opt in ipairs(opts) do
+						dd._selected[opt] = true
+					end
+					dd._selectedCount = #opts
+				end
+				-- Update display text
+				if dd._selectedCount == 0 then
+					dd.SelectText.Text = ""
+				elseif dd._selectedCount <= 2 then
+					local parts = {}
+					for _, o in ipairs(opts) do
+						if dd._selected[o] then table.insert(parts, o) end
+					end
+					dd.SelectText.Text = table.concat(parts, ", ")
+				else
+					dd.SelectText.Text = dd._selectedCount .. " selected"
+				end
+				-- Update all option buttons in-place
+				for idx, btn in ipairs(options) do
+					local isSel = dd._selected[opts[idx]]
+					btn.BackgroundColor3 = isSel and theme.Accent or Color3.new(0,0,0)
+					btn.BackgroundTransparency = isSel and 0.15 or 1
+					local check = btn:FindFirstChild("Check")
+					if check then check.Text = isSel and "✓" or "" end
+				end
+				task.spawn(function() dd.Callback(dd:GetValue()) end)
 			end)
 		end
 
@@ -2150,7 +2168,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.24", Theme = Theme }
+	local FyyUI = { Version = "0.9.25", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
