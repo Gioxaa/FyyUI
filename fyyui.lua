@@ -414,7 +414,7 @@ return (function()
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = self.Fill })
 
-		local knobSize = 14
+		local knobSize = 18
 		self.Knob = U.Create("ImageButton", {
 			Name = "Knob",
 			Size = UDim2.fromOffset(knobSize, knobSize),
@@ -424,6 +424,7 @@ return (function()
 			Parent = self.Track,
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = self.Knob })
+		U.Create("UIStroke", { Color = Color3.fromRGB(255,255,255), Transparency = 0.5, Thickness = 1.5, Parent = self.Knob })
 		self:_updateKnobPos()
 
 		local uis = game:GetService("UserInputService")
@@ -493,7 +494,7 @@ return (function()
 	function Slider:_updateKnobPos()
 		local pct = (self.Max ~= self.Min) and (self.Value - self.Min) / (self.Max - self.Min) or 0
 		pct = math.clamp(pct, 0, 1)
-		self.Knob.Position = UDim2.new(pct, -7, 0.5, -7)
+		self.Knob.Position = UDim2.new(pct, -9, 0.5, -9)
 	end
 
 	function Slider:SetValue(v, noCallback)
@@ -503,7 +504,7 @@ return (function()
 		local pct = (self.Max ~= self.Min) and (v - self.Min) / (self.Max - self.Min) or 0
 		pct = math.clamp(pct, 0, 1)
 		self.Fill.Size = UDim2.new(pct, 0, 1, 0)
-		self.Knob.Position = UDim2.new(pct, -7, 0.5, -7)
+		self.Knob.Position = UDim2.new(pct, -9, 0.5, -9)
 		self.ValueLabel.Text = tostring(v) .. self.Suffix
 		if not noCallback then
 			task.spawn(function() self.Callback(v) end)
@@ -2015,7 +2016,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.22", Theme = Theme }
+	local FyyUI = { Version = "0.9.23", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
