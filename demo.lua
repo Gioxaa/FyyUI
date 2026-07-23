@@ -14,8 +14,13 @@ local menu = FyyUI.Menu({
 	CompactBreakpoint = 640,
 	SafePadding = 12,
 	TouchTargetSize = 44,
-	ReducedMotion = false, -- QA: set true and verify transient UI opens/closes instantly.
+	ReducedMotion = false, -- QA: set true and verify tabs, window transitions, and confirm popups open/close instantly.
 })
+
+-- Accessibility QA: use a gamepad to move between ordered tab/control targets,
+-- open/close a dropdown or close confirmation, and confirm focus returns safely.
+-- Focus a text input or capture a keybind and verify menu shortcuts/navigation do not steal it.
+-- On touch, tap the full checkbox row, each window control, and the lower-right resize grip.
 
 -- Tab 1: Combat
 local combatTab = menu:Tab({ Text = "Combat", Icon = "crosshair" })

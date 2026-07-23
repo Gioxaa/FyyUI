@@ -144,7 +144,7 @@ return (function()
 		return inst
 	end
 
-	local LIBRARY_VERSION = "0.12.0"
+	local LIBRARY_VERSION = "0.13.0"
 	local CONFIG_V2_SCHEMA = "FyyUI.Config.v2"
 	local MAX_CONFIG_JSON_BYTES = 64 * 1024
 	local MAX_CONFIG_VALUES = 512
@@ -424,7 +424,7 @@ return (function()
 			if not self.Enabled then return end
 			self.Track.BackgroundColor3 = self.Value and theme.ToggleOn or theme.ToggleOff
 		end)
-		self.Track.MouseButton1Click:Connect(function()
+		self.Track.Activated:Connect(function()
 			if not self.Enabled then return end
 			self:SetValue(not self.Value)
 		end)
@@ -873,7 +873,7 @@ return (function()
 		end
 
 		-- Dropdown toggle
-		self.SelectBtn.MouseButton1Click:Connect(function()
+		self.SelectBtn.Activated:Connect(function()
 			if not self._menu then return end
 			if self._menu._activePopupFrame then
 				self.Open = false
@@ -1700,6 +1700,7 @@ return (function()
 			AutoButtonColor = false,
 			Parent = menu.SidebarList,
 		})
+		menu:_makeSelectable(self.TabButton)
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.TabButton })
 		-- Active glow overlay (subtle white, visible when tab is selected)
 		self._glow = U.Create("Frame", {
@@ -1765,8 +1766,11 @@ return (function()
 			end
 		end)
 
-		self.TabButton.MouseButton1Click:Connect(function()
+		self.TabButton.Activated:Connect(function()
 			menu:SelectTab(self)
+		end)
+		self.TabButton.SelectionGained:Connect(function()
+			if menu:_selectionIsAvailable() then menu:SelectTab(self) end
 		end)
 		self.TabButton.MouseEnter:Connect(function()
 			if menu.ActiveTab ~= self then
@@ -1798,6 +1802,7 @@ return (function()
 		options = options or {}
 		local toggle = Toggle.new(self.Container, options, self.Theme)
 		table.insert(self.Components, toggle)
+		self.Menu:_makeSelectable(toggle.Track)
 		if toggle.Flag then self.Menu:_trackFlagged(toggle) end
 		if options.Tooltip and self.Menu then
 			self.Menu:BindTooltip(toggle.Container, options.Tooltip)
@@ -1824,6 +1829,8 @@ return (function()
 			BorderSizePixel = 0,
 			Parent = self.Container,
 		})
+		if menuRef then menuRef:_makeSelectable(self.SelectBtn) end
+		self.Menu:_makeSelectable(btn.Container)
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = btn.Container })
 		U.Create("UIStroke", { Color = theme.ElementBorder, Transparency = 0.6, Thickness = 1, Parent = btn.Container })
 
@@ -2144,14 +2151,18 @@ return (function()
 		self.Theme = theme
 		self.HasDesc = options.Description ~= nil and options.Description ~= ""
 		local h = self.HasDesc and theme.DescHeight or theme.ElementHeight
+		local rowHeight = math.max(h + 6, 44)
 
-		self.Container = U.Create("Frame", {
+		self.Container = U.Create("ImageButton", {
 			Name = "Checkbox",
-			Size = UDim2.new(1, -12, 0, h + 6),
+			Size = UDim2.new(1, -12, 0, rowHeight),
 			Position = UDim2.fromOffset(6, 0),
 			BackgroundColor3 = theme.Element,
 			BackgroundTransparency = 0,
 			BorderSizePixel = 0,
+			AutoButtonColor = false,
+			Selectable = true,
+			Active = true,
 			Parent = parent,
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = self.Container })
@@ -2218,7 +2229,10 @@ return (function()
 		self.Box.MouseLeave:Connect(function()
 			self.Box.BackgroundColor3 = self.Value and theme.Accent or theme.ElementHover
 		end)
-		self.Box.MouseButton1Click:Connect(function()
+		self.Box.Activated:Connect(function()
+			self:SetValue(not self.Value)
+		end)
+		self.Container.Activated:Connect(function()
 			self:SetValue(not self.Value)
 		end)
 
@@ -2559,6 +2573,7 @@ return (function()
 		options = options or {}
 		local c = Checkbox.new(self.Container, options, self.Theme)
 		table.insert(self.Components, c)
+		self.Menu:_makeSelectable(c.Container)
 		if c.Flag then self.Menu:_trackFlagged(c) end
 		if options.Tooltip and self.Menu then
 			self.Menu:BindTooltip(c.Container, options.Tooltip)
@@ -2663,6 +2678,41 @@ return (function()
 		return tween
 	end
 
+	-- Selection is opt-in and menu-scoped: never replace text entry or keybind capture.
+	function Menu:_nextSelectionOrder()
+		self._selectionOrder = (self._selectionOrder or 0) + 1
+		return self._selectionOrder
+	end
+
+	function Menu:_makeSelectable(instance)
+		if not instance then return instance end
+		instance.Selectable = true
+		instance.Active = true
+		instance.SelectionOrder = self:_nextSelectionOrder()
+		return instance
+	end
+
+	function Menu:_selectionIsAvailable()
+		if self._destroyed or self._capturingKeybind then return false end
+		return game:GetService("UserInputService"):GetFocusedTextBox() == nil
+	end
+
+	function Menu:_isGamepadNavigation()
+		return tostring(game:GetService("UserInputService"):GetLastInputType()):find("Gamepad", 1, true) ~= nil
+	end
+
+	function Menu:_beginTransientFocus(fallback)
+		if not self:_selectionIsAvailable() or not self:_isGamepadNavigation() then return nil end
+		local selected = game:GetService("GuiService").SelectedObject
+		if selected and self.Gui and selected:IsDescendantOf(self.Gui) then return selected end
+		return fallback
+	end
+
+	function Menu:_restoreTransientFocus(target)
+		if not target or not target.Parent or not self:_selectionIsAvailable() then return end
+		game:GetService("GuiService").SelectedObject = target
+	end
+
 	function Menu:_modalSize(preferredWidth, preferredHeight, minimumWidth, minimumHeight)
 		local viewport = self:_viewportSize()
 		local usableWidth = math.max(1, viewport.X - self.SafePadding * 2)
@@ -2746,6 +2796,7 @@ return (function()
 		self._flagRegistry = {}
 		self._keybindList = {}
 		self._capturingKeybind = nil
+		self._selectionOrder = 0
 		-- Command Palette state
 		self._paletteOpen = false
 		self._paletteOverlay = nil
@@ -2899,7 +2950,8 @@ return (function()
 				Maximize = Color3.fromRGB(39, 201, 63),
 			}
 			local btnSize = 12
-			local spacing = 6
+			local hitSize = 44
+			local spacing = 4
 
 			local macIcons = {
 				Close = resolveIcon("x"),
@@ -2909,13 +2961,23 @@ return (function()
 			local function macBtn(name, color, action)
 				local b = U.Create("ImageButton", {
 					Name = name,
-					Size = UDim2.fromOffset(btnSize, btnSize),
-					Position = UDim2.new(0, rightMargin, 0.5, -btnSize / 2),
-					BackgroundColor3 = color,
+					Size = UDim2.fromOffset(hitSize, hitSize),
+					Position = UDim2.new(0, rightMargin, 0, 0),
+					BackgroundTransparency = 1,
 					AutoButtonColor = false,
 					Parent = self.Topbar,
 				})
-				U.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = b })
+				self:_makeSelectable(b)
+				local dot = U.Create("Frame", {
+					Name = "Dot",
+					Size = UDim2.fromOffset(btnSize, btnSize),
+					Position = UDim2.fromScale(0.5, 0.5),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					BackgroundColor3 = color,
+					BorderSizePixel = 0,
+					Parent = b,
+				})
+				U.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = dot })
 				local icon = macIcons[name]
 				if icon then
 					U.Create("ImageLabel", {
@@ -2931,8 +2993,8 @@ return (function()
 						Parent = b,
 					})
 				end
-				b.MouseButton1Click:Connect(action)
-				rightMargin = rightMargin + btnSize + spacing
+				b.Activated:Connect(action)
+				rightMargin = rightMargin + hitSize + spacing
 				return b
 			end
 
@@ -2955,12 +3017,13 @@ return (function()
 			local function winBtn(name, action, xOff, hoverC)
 				local b = U.Create("ImageButton", {
 					Name = name,
-					Size = UDim2.fromOffset(26, 26),
-					Position = UDim2.new(1, xOff, 0.5, -13),
+					Size = UDim2.fromOffset(44, 44),
+					Position = UDim2.new(1, xOff, 0, 0),
 					BackgroundTransparency = 1,
 					AutoButtonColor = false,
 					Parent = self.Topbar,
 				})
+				self:_makeSelectable(b)
 				U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = b })
 				local icon = U.Create("ImageLabel", {
 					Name = "Icon",
@@ -2981,7 +3044,7 @@ return (function()
 					b.BackgroundTransparency = 1
 					icon.ImageColor3 = Color3.fromRGB(150, 150, 165)
 				end)
-				b.MouseButton1Click:Connect(action)
+				b.Activated:Connect(action)
 				return b
 			end
 			-- Helper: reset window button hover states
@@ -2994,11 +3057,11 @@ return (function()
 					end
 				end
 			end
-			winBtn("Close", function() self:_confirmClose() end, -36, Color3.fromRGB(200, 60, 60))
+			winBtn("Close", function() self:_confirmClose() end, -44, Color3.fromRGB(200, 60, 60))
 			winBtn("Maximize", function()
 				resetWinHover()
 				self:_toggleMaximize()
-			end, -66, Color3.fromRGB(45, 45, 55))
+			end, -88, Color3.fromRGB(45, 45, 55))
 			winBtn("Minimize", function()
 				if self.Minimized then
 					resetWinHover()
@@ -3006,7 +3069,7 @@ return (function()
 				else
 					self:_minimize()
 				end
-			end, -96, Color3.fromRGB(45, 45, 55))
+			end, -132, Color3.fromRGB(45, 45, 55))
 		end
 
 		-- Logo image for floating minimize icon (true=default, string=custom, nil=false)
@@ -3478,16 +3541,11 @@ return (function()
 		local position = UDim2.fromOffset(5, (tabIdx - 1) * 40 + 9 - scrollY)
 		self.ActiveBar.BackgroundTransparency = 0
 		if animate then
-			local tween = game:GetService("TweenService"):Create(
-				self.ActiveBar,
-				TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-				{ Position = position }
-			)
+			local tween = self:_transition(self.ActiveBar, 0.22, { Position = position })
 			self._activeBarTween = tween
-			tween.Completed:Connect(function()
+			if tween then tween.Completed:Connect(function()
 				if self._activeBarTween == tween then self._activeBarTween = nil end
-			end)
-			tween:Play()
+			end) else self._activeBarTween = nil end
 		else
 			self.ActiveBar.Position = position
 		end
@@ -3496,8 +3554,6 @@ return (function()
 	function Menu:SelectTab(tab)
 		if self.ActiveTab == tab then return end
 		self:HideDropdownPopup()
-		local ts = game:GetService("TweenService")
-		local ti = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		local offsetY = 36
 
 		-- Hide old tab content immediately (no glitchy slide-out)
@@ -3517,7 +3573,7 @@ return (function()
 			-- New tab slides in from below
 			tab.Container.Position = UDim2.fromOffset(6, offsetY)
 			tab.Container.Visible = true
-			ts:Create(tab.Container, ti, { Position = UDim2.fromOffset(6, 3) }):Play()
+			self:_transition(tab.Container, 0.22, { Position = UDim2.fromOffset(6, 3) })
 
 			self:_positionActiveBar(tab, hadPrevTab)
 
@@ -3534,6 +3590,7 @@ return (function()
 		if self._destroyed or not self.Gui or not self.Frame then return false, "destroyed" end
 		if type(opts) ~= "table" then return false, "expected options table" end
 		self:HideDropdownPopup()
+		self._popupFocusReturn = self:_beginTransientFocus(dd and dd.SelectBtn)
 		self._popupGen = (self._popupGen or 0) + 1  -- bump generation so stale close handlers bail out
 
 		local uis = game:GetService("UserInputService")
@@ -3646,6 +3703,7 @@ return (function()
 			Parent = popup,
 		})
 
+		local firstOptionButton
 		if #opts > 0 then
 			-- ScrollingFrame for option list (content-aware)
 			local optionList = U.Create("ScrollingFrame", {
@@ -3684,6 +3742,8 @@ return (function()
 					ZIndex = 10001,
 					Parent = optionList,
 				})
+				self:_makeSelectable(btn)
+				if not firstOptionButton then firstOptionButton = btn end
 				U.Create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = btn })
 				U.Create("UIStroke", { Color = theme.ElementBorder, Transparency = 0.5, Thickness = 1, Parent = btn })
 				local textOffset = isMulti and 28 or 10
@@ -3700,7 +3760,7 @@ return (function()
 					ZIndex = 10002,
 					Parent = btn,
 				})
-				btn.MouseButton1Click:Connect(function()
+				btn.Activated:Connect(function()
 					if isMulti then
 						if dd then
 							dd:SetValue(opt)
@@ -3748,6 +3808,9 @@ return (function()
 		self._activePopupFrame = popup
 		self._activePopupModal = modal
 		self:_transition(popup, 0.25, { Size = UDim2.fromOffset(w, clampedH) })
+		if self._popupFocusReturn and firstOptionButton then
+			game:GetService("GuiService").SelectedObject = firstOptionButton
+		end
 
 		-- Close on click outside (generation-guarded: stale invocations after a new popup are no-ops)
 		local closeGen = self._popupGen
@@ -3782,6 +3845,9 @@ return (function()
 		end
 		if self._activePopupOverlay then self._activePopupOverlay:Destroy(); self._activePopupOverlay = nil end
 		self._activePopupModal = nil
+		local focusReturn = self._popupFocusReturn
+		self._popupFocusReturn = nil
+		self:_restoreTransientFocus(focusReturn)
 		if self._activeDropdown then
 			self._activeDropdown.Open = false
 			if self._activeDropdown._arrow and self._activeDropdown._arrowDown then
@@ -4191,18 +4257,11 @@ return (function()
 		self._minPrevSize = self.Frame.Size
 		self._minPrevPos = self.Frame.Position
 
-		local ts = game:GetService("TweenService")
-		local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut)
 		local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or (self._noLogoSavedPos or UDim2.new(0.5,-25,0.5,-25))
-
-		ts:Create(self.Frame, ti, {
-			Size = UDim2.fromOffset(60, 60),
-			Position = iconPos,
-		}):Play()
 
 		self._minimizeToken = (self._minimizeToken or 0) + 1
 		local minimizeToken = self._minimizeToken
-		task.delay(0.25, function()
+		local function finishMinimize()
 			if self._destroyed or self._minimizeToken ~= minimizeToken or not self.Minimized or not self.Visible then return end
 			if self._minGui then
 				self._minGui.Enabled = true
@@ -4213,7 +4272,11 @@ return (function()
 				self._noLogoRestoreGui.Parent = self.GuiParent
 				self.Gui.Enabled = false
 			end
-		end)
+		end
+		self:_transition(self.Frame, 0.3, {
+			Size = UDim2.fromOffset(60, 60),
+			Position = iconPos,
+		}, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut, finishMinimize)
 	end
 
 	function Menu:_restore()
@@ -4221,18 +4284,16 @@ return (function()
 		self._minimizeToken = (self._minimizeToken or 0) + 1
 		self.Minimized = false
 
-		local ts = game:GetService("TweenService")
-		local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut)
 		local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or (self._noLogoSavedPos or UDim2.new(0.5,-25,0.5,-25))
 
 		self.Frame.Size = UDim2.fromOffset(60, 60)
 		self.Frame.Position = iconPos
 		self.Gui.Enabled = true
 
-		ts:Create(self.Frame, ti, {
+		self:_transition(self.Frame, 0.3, {
 			Size = self._minPrevSize or self._initialSize,
 			Position = self._minPrevPos or self._initialPos,
-		}):Play()
+		}, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut)
 
 		if self._minGui then self._minGui.Enabled = false end
 		if self._noLogoRestoreGui then self._noLogoRestoreGui.Enabled = false end
@@ -4262,31 +4323,34 @@ return (function()
 			targetPosition = self._maxPrevPos or self._initialPos
 		end
 
-		self._maximizeTween = game:GetService("TweenService"):Create(
-			self.Frame,
-			TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-			{ Size = targetSize, Position = targetPosition }
-		)
-		self._maximizeTween.Completed:Connect(function()
+		self._maximizeTween = self:_transition(self.Frame, 0.25, { Size = targetSize, Position = targetPosition }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, function()
 			if self._destroyed then return end
 			self._maximizing = false
 			self._maximizeTween = nil
 			if self._updateShadow then self._updateShadow() end
 		end)
-		self._maximizeTween:Play()
 	end
 
 	function Menu:_resizable()
 		local grip = U.Create("ImageButton", {
 			Name = "ResizeGrip",
+			Size = UDim2.fromOffset(44, 44),
+			Position = UDim2.new(1, -44, 1, -44),
+			BackgroundTransparency = 1,
+			AutoButtonColor = false,
+			Active = true,
+			Parent = self.Frame,
+		})
+		local gripVisual = U.Create("Frame", {
+			Name = "Visual",
 			Size = UDim2.fromOffset(14, 14),
 			Position = UDim2.new(1, -14, 1, -14),
 			BackgroundColor3 = self.Theme.TextMuted,
 			BackgroundTransparency = 0.6,
-			AutoButtonColor = false,
-			Parent = self.Frame,
+			BorderSizePixel = 0,
+			Parent = grip,
 		})
-		U.Create("UICorner", { CornerRadius = UDim.new(0, 2), Parent = grip })
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 2), Parent = gripVisual })
 
 		local frame = self.Frame
 		local shadow = self._shadow
@@ -4382,8 +4446,8 @@ return (function()
 		if self._confirmPopup then return end
 		-- Close any active dropdown first so it cannot overlay the confirmation UI
 		self:HideDropdownPopup()
+		self._confirmFocusReturn = self:_beginTransientFocus(self.Topbar)
 		local theme = self.Theme
-		local ts = game:GetService("TweenService")
 		local frame = self.Frame
 
 		-- Overlay (below popup, blocks background)
@@ -4463,6 +4527,7 @@ return (function()
 				ZIndex = 14,
 				Parent = popup,
 			})
+			self:_makeSelectable(b)
 			U.Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = b })
 			local bs = U.Create("UIScale", { Parent = b, Scale = 1 })
 			U.Create("TextLabel", {
@@ -4475,37 +4540,42 @@ return (function()
 				ZIndex = 15,
 				Parent = b,
 			})
-			b.MouseEnter:Connect(function() ts:Create(b, TweenInfo.new(0.12), { BackgroundColor3 = hovColor, BackgroundTransparency = 0.05 }):Play() end)
-			b.MouseLeave:Connect(function() ts:Create(b, TweenInfo.new(0.12), { BackgroundColor3 = defColor, BackgroundTransparency = 0.25 }):Play() end)
-			b.MouseButton1Down:Connect(function() ts:Create(bs, TweenInfo.new(0.05), { Scale = 0.95 }):Play() end)
-			b.MouseButton1Up:Connect(function() ts:Create(bs, TweenInfo.new(0.08), { Scale = 1 }):Play() end)
-			b.MouseButton1Click:Connect(cb)
+			b.MouseEnter:Connect(function() self:_transition(b, 0.12, { BackgroundColor3 = hovColor, BackgroundTransparency = 0.05 }) end)
+			b.MouseLeave:Connect(function() self:_transition(b, 0.12, { BackgroundColor3 = defColor, BackgroundTransparency = 0.25 }) end)
+			b.MouseButton1Down:Connect(function() self:_transition(bs, 0.05, { Scale = 0.95 }) end)
+			b.MouseButton1Up:Connect(function() self:_transition(bs, 0.08, { Scale = 1 }) end)
+			b.Activated:Connect(cb)
 			return b
 		end
 
 		self._confirmPopup = { popup = popup, overlay = overlay, shadow = shadow }
 
 		-- Fade IN: only overlay dims (popup already fully visible & clickable)
-		ts:Create(overlay, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0.5 }):Play()
+		self:_transition(overlay, 0.2, { BackgroundTransparency = 0.5 })
 
 		-- Close
 		local closing = false
 		local function closePopup(cb)
 			if closing then return end
 			closing = true
-			ts:Create(overlay, TweenInfo.new(0.2), { BackgroundTransparency = 1 }):Play()
-			task.delay(0.25, function()
+			self:_transition(overlay, 0.2, { BackgroundTransparency = 1 }, nil, nil, function()
 				if self._destroyed then return end
 				if overlay then overlay:Destroy() end
 				if popup then popup:Destroy() end
 				if shadow then shadow:Destroy() end
 				self._confirmPopup = nil
+				local focusReturn = self._confirmFocusReturn
+				self._confirmFocusReturn = nil
+				self:_restoreTransientFocus(focusReturn)
 				if cb then cb() end
 			end)
 		end
 
-		makeBtn("No", 20, Color3.fromRGB(55, 55, 68), Color3.fromRGB(75, 75, 90), function() closePopup(nil) end)
+		local noButton = makeBtn("No", 20, Color3.fromRGB(55, 55, 68), Color3.fromRGB(75, 75, 90), function() closePopup(nil) end)
 		makeBtn("Yes", 140, Color3.fromRGB(170, 45, 45), Color3.fromRGB(210, 60, 60), function() closePopup(function() self:SetVisible(false) end) end)
+		if self._confirmFocusReturn then
+			game:GetService("GuiService").SelectedObject = noButton
+		end
 	end
 
 	function Menu:Destroy()
@@ -4624,7 +4694,10 @@ return (function()
 
 		-- Resize grip
 		local grip = self.Frame:FindFirstChild("ResizeGrip")
-		if grip then grip.BackgroundColor3 = theme.TextMuted end
+		if grip then
+			local visual = grip:FindFirstChild("Visual")
+			if visual then visual.BackgroundColor3 = theme.TextMuted end
+		end
 
 		-- No-logo restore button (minimize affordance)
 		if self._noLogoRestoreBtn then

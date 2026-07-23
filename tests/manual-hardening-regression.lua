@@ -6,7 +6,7 @@
 -- transient overlays were removed; those checks protect the lifecycle bug this
 -- release fixes.
 return function(FyyUI)
-	assert(FyyUI.Version == "0.12.0", "library version must identify the safe persistence release")
+	assert(FyyUI.Version == "0.13.0", "library version must identify the accessibility/input hardening release")
 	local originalIconModule = FyyUI.GetIconModule()
 	local remoteIconOk, remoteIconErr = FyyUI.LoadRemoteIconModule("https://example.invalid/icons.lua")
 	assert(remoteIconOk == false and type(remoteIconErr) == "string" and remoteIconErr:find("SetIconModule", 1, true), "remote icon loading must stay disabled and provide a local migration path")
@@ -21,7 +21,7 @@ return function(FyyUI)
 	assert(menu.Responsive and menu.CompactBreakpoint == 640 and menu.SafePadding == 12, "responsive defaults must be stable")
 	assert(menu.TouchTargetSize == 36 and not menu._reducedMotion, "touch and motion defaults must be stable")
 	local legacyConfig = menu:ExportConfig()
-	assert(legacyConfig.Schema == "FyyUI.Config.v1" and legacyConfig.Version == "0.12.0", "zero-argument config export must retain the v1 contract")
+	assert(legacyConfig.Schema == "FyyUI.Config.v1" and legacyConfig.Version == "0.13.0", "zero-argument config export must retain the v1 contract")
 	assert(not pcall(function() FyyUI.Menu({ CompactBreakpoint = 0 }) end), "invalid compact breakpoints must fail early")
 	assert(not pcall(function() FyyUI.Menu({ SafePadding = -1 }) end), "invalid safe padding must fail early")
 	assert(not pcall(function() FyyUI.Menu({ TouchTargetSize = math.huge }) end), "invalid touch target sizes must fail early")
@@ -45,6 +45,9 @@ return function(FyyUI)
 	local tab = menu:Tab({ Text = "Regression" })
 	local toggle = tab:Toggle({ Flag = "toggle", Callback = function() callbacks.toggle += 1 end })
 	local checkbox = tab:Checkbox({ Flag = "checkbox", Callback = function() callbacks.checkbox += 1 end })
+	assert(tab.TabButton.Selectable and tab.TabButton.SelectionOrder > 0, "tab navigation must expose an ordered selectable target")
+	assert(checkbox.Container.Selectable and checkbox.Container.SelectionOrder > tab.TabButton.SelectionOrder, "checkbox must expose an ordered whole-row selectable target")
+	assert(checkbox.Container.Active and checkbox.Container.AbsoluteSize.Y >= 24, "checkbox row must remain a practical touch target")
 	local multi = tab:Dropdown({
 		Flag = "multi",
 		Multi = true,
@@ -80,7 +83,7 @@ return function(FyyUI)
 
 	-- v2 is explicitly selected, JSON-safe, and never partially mutates on malformed input.
 	local v2 = menu:ExportConfig({ SchemaVersion = 2 })
-	assert(v2.Schema == "FyyUI.Config.v2" and v2.SchemaVersion == 2 and v2.Version == "0.12.0", "explicit v2 export must use the versioned JSON-safe envelope")
+	assert(v2.Schema == "FyyUI.Config.v2" and v2.SchemaVersion == 2 and v2.Version == "0.13.0", "explicit v2 export must use the versioned JSON-safe envelope")
 	assert(v2.Values.numeric == "", "v2 export must preserve blank numeric inputs")
 	local json, jsonErr = menu:ExportConfigJSON()
 	assert(type(json) == "string" and jsonErr == nil, "v2 config must export to JSON")
