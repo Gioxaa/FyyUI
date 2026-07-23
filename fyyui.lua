@@ -1,5 +1,5 @@
 --[[
-	FyyUI v0.10.8
+	FyyUI v0.10.9
 	Roblox UI Library
 	@github FyyWannaFly/FyyUI
 	
@@ -156,6 +156,15 @@ return (function()
 	local function destroyedResult(controller)
 		if controller._destroyed then
 			return true, false, "destroyed"
+		end
+		return false
+	end
+
+	local function destroyedFactoryResult(owner)
+		if owner._destroyed
+			or (owner.Menu and owner.Menu._destroyed)
+			or (owner._menu and owner._menu._destroyed) then
+			return true, nil, "destroyed"
 		end
 		return false
 	end
@@ -847,7 +856,8 @@ return (function()
 			end
 			self.SelectText.TextColor3 = (self._selectedCount > 0) and self.Theme.TextPrimary or self.Theme.TextMuted
 			if not noCallback then
-				task.spawn(function() self.Callback(self._selected) end)
+				local snapshot = self:GetValue()
+				task.spawn(function() self.Callback(snapshot) end)
 			end
 			return true
 		end
@@ -907,11 +917,24 @@ return (function()
 	end
 
 	function Dropdown:SetOptions(options, preferredValue, noCallback)
-		options = options or {}
+		local isDestroyed, result, err = destroyedResult(self)
+		if isDestroyed then return result, err end
+		if options == nil then options = {} end
+		if type(options) ~= "table" then return false, "expected options table" end
 		local oldValue = self:GetValue()
+		local function sameSelection(a, b)
+			if type(a) ~= "table" or type(b) ~= "table" then return a == b end
+			if #a ~= #b then return false end
+			for i, value in ipairs(a) do
+				if b[i] ~= value then return false end
+			end
+			return true
+		end
 
 		-- Replace options list
-		self.Options = options
+		self.Options = {}
+		for i, option in ipairs(options) do self.Options[i] = option end
+		options = self.Options
 
 		if self.Multi then
 			-- Multi: remove selections that no longer exist in new options
@@ -980,7 +1003,10 @@ return (function()
 		-- Fire callback if selection changed (and noCallback is not set)
 		if not noCallback then
 			if self.Multi then
-				task.spawn(function() self.Callback(self._selected) end)
+				local newValue = self:GetValue()
+				if not sameSelection(oldValue, newValue) then
+					task.spawn(function() self.Callback(newValue) end)
+				end
 			else
 				local newValue = self.Value
 				if newValue ~= oldValue then
@@ -988,6 +1014,7 @@ return (function()
 				end
 			end
 		end
+		return true
 	end
 
 	function Dropdown:_optIndex(list, value)
@@ -999,10 +1026,10 @@ return (function()
 
 	function Dropdown:Refresh(options, preferredValue, noCallback)
 		if options ~= nil then
-			self:SetOptions(options, preferredValue, noCallback)
+			return self:SetOptions(options, preferredValue, noCallback)
 		else
 			-- Refresh from current options, preserve current selection
-			self:SetOptions(self.Options, self.Value, noCallback)
+			return self:SetOptions(self.Options, self.Value, noCallback)
 		end
 	end
 
@@ -1635,6 +1662,7 @@ return (function()
 	end
 
 	function Tab:Toggle(options)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		options = options or {}
 		local toggle = Toggle.new(self.Container, options, self.Theme)
 		table.insert(self.Components, toggle)
@@ -1646,6 +1674,7 @@ return (function()
 	end
 
 	function Tab:Button(options)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		options = options or {}
 		local theme = self.Theme
 		local hasDesc = options.Description ~= nil and options.Description ~= ""
@@ -1772,6 +1801,7 @@ return (function()
 	end
 
 	function Tab:Label(options)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		options = options or {}
 		local hasDesc = options.Description ~= nil and options.Description ~= ""
 		local h = hasDesc and self.Theme.DescHeight or self.Theme.ElementHeight
@@ -1833,6 +1863,7 @@ return (function()
 	end
 
 	function Tab:BoldLabel(options)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		options = options or {}
 		local hasDesc = options.Description ~= nil and options.Description ~= ""
 		local h = hasDesc and self.Theme.DescHeight or self.Theme.ElementHeight
@@ -1894,6 +1925,7 @@ return (function()
 	end
 
 	function Tab:Divider()
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		local div = {}
 		div.Container = U.Create("Frame", {
 			Name = "Divider",
@@ -1919,6 +1951,7 @@ return (function()
 	end
 
 	function Tab:Slider(options)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		options = options or {}
 		local slider = Slider.new(self.Container, options, self.Theme)
 		table.insert(self.Components, slider)
@@ -1930,6 +1963,7 @@ return (function()
 	end
 
 	function Tab:Dropdown(options)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		options = options or {}
 		local dd = Dropdown.new(self.Container, options, self.Theme, self.Menu)
 		table.insert(self.Components, dd)
@@ -1941,6 +1975,7 @@ return (function()
 	end
 
 	function Tab:Keybind(options)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		options = options or {}
 		local kb = Keybind.new(self.Container, options, self.Theme, self.Menu)
 		table.insert(self.Components, kb)
@@ -1952,6 +1987,7 @@ return (function()
 	end
 
 	function Tab:Input(options)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		options = options or {}
 		local ti = TextInput.new(self.Container, options, self.Theme)
 		table.insert(self.Components, ti)
@@ -2228,7 +2264,8 @@ return (function()
 		local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		local contentH = self._layout and self._layout.AbsoluteContentSize.Y or 0
 		local targetH = v and (34 + contentH) or 34
-		self._tween = ts:Create(self.Container, ti, { Size = UDim2.new(1, -12, 0, targetH) }):Play()
+		self._tween = ts:Create(self.Container, ti, { Size = UDim2.new(1, -12, 0, targetH) })
+		self._tween:Play()
 		return true
 	end
 
@@ -2252,18 +2289,20 @@ return (function()
 			self.Container.Size = UDim2.new(1, -12, 0, targetH)
 		else
 			local ts = game:GetService("TweenService")
-			self._tween = ts:Create(self.Container, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(1, -12, 0, targetH) }):Play()
+			self._tween = ts:Create(self.Container, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(1, -12, 0, targetH) })
+			self._tween:Play()
 		end
 	end
 
 	-- Pass-through methods (all default opts to {}; Tooltip auto-bound via self._menu)
-	function Collapsible:Toggle(opts) opts = opts or {}; local c = Toggle.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
-	function Collapsible:Checkbox(opts) opts = opts or {}; local c = Checkbox.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
-	function Collapsible:Slider(opts) opts = opts or {}; local c = Slider.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
-	function Collapsible:Dropdown(opts) opts = opts or {}; local c = Dropdown.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
-	function Collapsible:Keybind(opts) opts = opts or {}; local c = Keybind.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
-	function Collapsible:Input(opts) opts = opts or {}; local c = TextInput.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
+	function Collapsible:Toggle(opts) if destroyedFactoryResult(self) then return nil, "destroyed" end; opts = opts or {}; local c = Toggle.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
+	function Collapsible:Checkbox(opts) if destroyedFactoryResult(self) then return nil, "destroyed" end; opts = opts or {}; local c = Checkbox.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
+	function Collapsible:Slider(opts) if destroyedFactoryResult(self) then return nil, "destroyed" end; opts = opts or {}; local c = Slider.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
+	function Collapsible:Dropdown(opts) if destroyedFactoryResult(self) then return nil, "destroyed" end; opts = opts or {}; local c = Dropdown.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
+	function Collapsible:Keybind(opts) if destroyedFactoryResult(self) then return nil, "destroyed" end; opts = opts or {}; local c = Keybind.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
+	function Collapsible:Input(opts) if destroyedFactoryResult(self) then return nil, "destroyed" end; opts = opts or {}; local c = TextInput.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
 	function Collapsible:Button(opts)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		opts = opts or {}
 		local theme = self.Theme
 		local hasDesc = opts.Description ~= nil and opts.Description ~= ""
@@ -2303,6 +2342,7 @@ return (function()
 		table.insert(self.Components, btn); self:_updateSize(); return btn
 	end
 	function Collapsible:Label(opts)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		opts = opts or {}
 		local theme = self.Theme
 		local hasDesc = opts.Description ~= nil and opts.Description ~= ""
@@ -2325,6 +2365,7 @@ return (function()
 		table.insert(self.Components, lbl); self:_updateSize(); return lbl
 	end
 	function Collapsible:BoldLabel(opts)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		opts = opts or {}
 		local theme = self.Theme
 		local hasDesc = opts.Description ~= nil and opts.Description ~= ""
@@ -2346,7 +2387,7 @@ return (function()
 		end
 		table.insert(self.Components, lbl); self:_updateSize(); return lbl
 	end
-	function Collapsible:Divider() local div = {}; div.Container = U.Create("Frame", { Name = "Divider", Size = UDim2.new(1, -20, 0, 1), Position = UDim2.fromOffset(10, 0), BackgroundColor3 = self.Theme.Border, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = self.Content }); div.ApplyTheme = function(t) if div.Container then div.Container.BackgroundColor3 = t.Border end end; table.insert(self.Components, div); self:_updateSize(); return div end
+	function Collapsible:Divider() if destroyedFactoryResult(self) then return nil, "destroyed" end; local div = {}; div.Container = U.Create("Frame", { Name = "Divider", Size = UDim2.new(1, -20, 0, 1), Position = UDim2.fromOffset(10, 0), BackgroundColor3 = self.Theme.Border, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = self.Content }); div.ApplyTheme = function(t) if div.Container then div.Container.BackgroundColor3 = t.Border end end; table.insert(self.Components, div); self:_updateSize(); return div end
 	function Collapsible:Destroy()
 		if self._destroyed then return end
 		self._destroyed = true
@@ -2377,6 +2418,7 @@ return (function()
 
 	--[[ Tab methods ]]
 	function Tab:Checkbox(options)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		options = options or {}
 		local c = Checkbox.new(self.Container, options, self.Theme)
 		table.insert(self.Components, c)
@@ -2387,6 +2429,7 @@ return (function()
 		return c
 	end
 	function Tab:Collapsible(title, options)
+		if destroyedFactoryResult(self) then return nil, "destroyed" end
 		local c = Collapsible.new(self.Container, title, options, self.Theme)
 		c._menu = self.Menu
 		table.insert(self.Components, c)
@@ -3467,6 +3510,7 @@ return (function()
 	end
 
 	function Menu:Tab(options)
+		if self._destroyed then return nil, "destroyed" end
 		options = options or {}
 		return Tab.new(self, options)
 	end
@@ -3498,18 +3542,24 @@ return (function()
 	end
 
 	function Menu:ExportConfig()
+		if self._destroyed then return nil, "destroyed" end
 		local snapshot = {
 			Schema = "FyyUI.Config.v1",
-			Version = "0.10.8",
+			Version = "0.10.9",
 			Values = {},
 		}
 		for flag, ctrl in pairs(self._flagRegistry) do
-			snapshot.Values[flag] = ctrl:GetValue()
+			if ctrl.Numeric and ctrl.IsEmpty and ctrl:IsEmpty() then
+				snapshot.Values[flag] = ""
+			else
+				snapshot.Values[flag] = ctrl:GetValue()
+			end
 		end
 		return snapshot
 	end
 
 	function Menu:ImportConfig(snapshot, options)
+		if self._destroyed then return false, "destroyed" end
 		if type(snapshot) ~= "table" then
 			return false, "Invalid config: expected a table"
 		end
@@ -3518,6 +3568,75 @@ return (function()
 		end
 		local noCallbacks = options and options.NoCallbacks == true
 		local details = { Applied = {}, Failed = {}, Unknown = {} }
+		local function validateValue(ctrl, value)
+			if ctrl._destroyed then return false, "destroyed" end
+			if ctrl.Multi then
+				if type(value) ~= "table" then return false, "expected options table" end
+				local count, maxIndex = 0, 0
+				for index, option in pairs(value) do
+					if type(index) ~= "number" or index < 1 or index % 1 ~= 0 then
+						return false, "expected dense options array"
+					end
+					count = count + 1
+					maxIndex = math.max(maxIndex, index)
+					if not ctrl:_optIndex(ctrl.Options, option) then return false, "unknown option" end
+				end
+				if count ~= maxIndex then return false, "expected dense options array" end
+				return true
+			end
+			if ctrl.Numeric then
+				if value == "" then return true end
+				local number = tonumber(value)
+				if not isFiniteNumber(number) then return false, "expected finite number" end
+				return true
+			end
+			if ctrl.Options then
+				if value == "" then
+					if ctrl.AllowNone or #ctrl.Options == 0 then return true end
+					return false, "selection required"
+				end
+				if not ctrl:_optIndex(ctrl.Options, value) then return false, "unknown option" end
+				return true
+			end
+			if ctrl._capturing ~= nil then
+				if value == nil then return true end
+				if typeof(value) == "EnumItem" then
+					if value.EnumType == Enum.KeyCode then return true end
+					return value == Enum.UserInputType.MouseButton1
+						or value == Enum.UserInputType.MouseButton2
+						or value == Enum.UserInputType.MouseButton3
+				end
+				if type(value) == "string" then
+					for _, item in ipairs(Enum.KeyCode:GetEnumItems()) do
+						if item.Name == value then return true end
+					end
+					for _, item in ipairs(Enum.UserInputType:GetEnumItems()) do
+						if item.Name == value and (item == Enum.UserInputType.MouseButton1 or item == Enum.UserInputType.MouseButton2 or item == Enum.UserInputType.MouseButton3) then return true end
+					end
+				end
+				return false, "expected a KeyCode, MouseButton input, key name, or nil"
+			end
+			if type(ctrl.Value) == "boolean" and type(value) ~= "boolean" then
+				return false, "expected boolean"
+			end
+			if ctrl.Min ~= nil and ctrl.Max ~= nil and not isFiniteNumber(value) then
+				return false, "expected finite number"
+			end
+			return true
+		end
+
+		-- Validate every registered controller before applying any state change.
+		for flag, value in pairs(snapshot.Values) do
+			local ctrl = self._flagRegistry[flag]
+			if ctrl then
+				local valid, validationError = validateValue(ctrl, value)
+				if not valid then
+					table.insert(details.Failed, { Flag = flag, Error = validationError })
+				end
+			end
+		end
+		if #details.Failed > 0 then return false, details end
+
 		for flag, value in pairs(snapshot.Values) do
 			local ctrl = self._flagRegistry[flag]
 			if ctrl then
@@ -3720,6 +3839,7 @@ return (function()
 
 	function Menu:_minimize()
 		if self._destroyed then return end
+		if self.Minimized then return true end
 		self:_closeTransientUi()
 		self.Minimized = true
 		self._minPrevSize = self.Frame.Size
@@ -4240,6 +4360,7 @@ return (function()
 	end
 
 	function Menu:SetTheme(themeOrName)
+		if self._destroyed then return false, "destroyed" end
 		if type(themeOrName) == "string" then
 			local builtin = Theme[themeOrName]
 			if not builtin then
@@ -4276,6 +4397,7 @@ return (function()
 	end
 
 	function Menu:GetScale()
+		if self._destroyed then return nil, "destroyed" end
 		return self.Scale
 	end
 
@@ -4841,7 +4963,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.10.8", Theme = Theme }
+	local FyyUI = { Version = "0.10.9", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
