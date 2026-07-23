@@ -1,5 +1,5 @@
 --[[
-	FyyUI v0.9.52
+	FyyUI v0.10.0
 	Roblox UI Library
 	@github FyyWannaFly/FyyUI
 	
@@ -209,6 +209,7 @@ return (function()
 		self.Description = options.Description
 		self.Value = options.Default or false
 		self.Callback = options.Callback or function() end
+		self.Flag = options.Flag
 		self.Enabled = true
 		self.Theme = theme
 		self.HasDesc = self.Description ~= nil and self.Description ~= ""
@@ -332,6 +333,25 @@ return (function()
 	end
 	function Toggle:Destroy() if self.Container then self.Container:Destroy() end end
 
+	function Toggle:ApplyTheme(theme)
+		self.Theme = theme
+		if not self.Container then return end
+		self.Container.BackgroundColor3 = theme.Element
+		local stroke = self.Container:FindFirstChildOfClass("UIStroke")
+		if stroke then stroke.Color = theme.ElementBorder end
+		self.Label.Font = theme.Font
+		self.Label.TextSize = theme.FontSize
+		self.Label.TextColor3 = theme.TextPrimary
+		local desc = self.Container:FindFirstChild("Description")
+		if desc then
+			desc.Font = theme.Font
+			desc.TextSize = theme.FontSizeSmall
+			desc.TextColor3 = theme.TextMuted
+		end
+		self.Track.BackgroundColor3 = self.Value and theme.ToggleOn or theme.ToggleOff
+		self.Knob.BackgroundColor3 = theme.ToggleKnob
+	end
+
 	--[[ Slider ]]
 	local Slider = {}
 	Slider.__index = Slider
@@ -346,6 +366,7 @@ return (function()
 		self.Suffix = options.Suffix or ""
 		self.Step = options.Step or 1
 		self.Callback = options.Callback or function() end
+		self.Flag = options.Flag
 		self.Theme = theme
 		self.HasDesc = self.Description ~= nil and self.Description ~= ""
 		local h = self.HasDesc and theme.DescHeight or theme.ElementHeight
@@ -517,6 +538,29 @@ return (function()
 		if self.Container then self.Container:Destroy() end
 	end
 
+	function Slider:ApplyTheme(theme)
+		self.Theme = theme
+		if not self.Container then return end
+		self.Container.BackgroundColor3 = theme.Element
+		local stroke = self.Container:FindFirstChildOfClass("UIStroke")
+		if stroke then stroke.Color = theme.ElementBorder end
+		self.Label.Font = theme.Font
+		self.Label.TextSize = theme.FontSize
+		self.Label.TextColor3 = theme.TextPrimary
+		self.ValueLabel.Font = theme.FontBold
+		self.ValueLabel.TextSize = theme.FontSize
+		self.ValueLabel.TextColor3 = theme.Accent
+		local desc = self.Container:FindFirstChild("Description")
+		if desc then
+			desc.Font = theme.Font
+			desc.TextSize = theme.FontSizeSmall
+			desc.TextColor3 = theme.TextMuted
+		end
+		self.Track.BackgroundColor3 = theme.ToggleOff
+		self.Fill.BackgroundColor3 = theme.Accent
+		self.Knob.BackgroundColor3 = theme.Accent
+	end
+
 	--[[ Dropdown ]]
 	local Dropdown = {}
 	Dropdown.__index = Dropdown
@@ -550,6 +594,7 @@ return (function()
 			end
 		end
 		self.Callback = options.Callback or function() end
+		self.Flag = options.Flag
 		self.Theme = theme
 		self.Open = false
 		self.HasDesc = self.Description ~= nil and self.Description ~= ""
@@ -766,6 +811,485 @@ return (function()
 		if self.Container then self.Container:Destroy() end
 	end
 
+	function Dropdown:ApplyTheme(theme)
+		self.Theme = theme
+		if not self.Container then return end
+		self.Container.BackgroundColor3 = theme.Element
+		local stroke = self.Container:FindFirstChildOfClass("UIStroke")
+		if stroke then stroke.Color = theme.ElementBorder end
+		local lbl = self.Container:FindFirstChild("Label")
+		if lbl then
+			lbl.Font = theme.Font
+			lbl.TextSize = theme.FontSize
+			lbl.TextColor3 = theme.TextPrimary
+		end
+		local desc = self.Container:FindFirstChild("Description")
+		if desc then
+			desc.Font = theme.Font
+			desc.TextSize = theme.FontSizeSmall
+			desc.TextColor3 = theme.TextMuted
+		end
+		self.SelectBtn.BackgroundColor3 = theme.ElementHover
+		self.SelectText.Font = theme.Font
+		self.SelectText.TextSize = theme.FontSize
+		self.SelectText.TextColor3 = theme.TextPrimary
+		if self._selectStroke then self._selectStroke.Color = theme.Accent end
+	end
+
+	--[[ Keybind ]]
+	local Keybind = {}
+	Keybind.__index = Keybind
+
+	function Keybind.new(parent, options, theme, menuRef)
+		local self = setmetatable({}, Keybind)
+		self.Text = options.Text or "Keybind"
+		self.Description = options.Description
+		self.Mode = options.Mode or "Toggle"
+		self.Callback = options.Callback or function() end
+		self.Flag = options.Flag
+		self.Theme = theme
+		self._menu = menuRef
+		self._inputType = nil  -- "Keyboard" or "MouseButton"
+		self._keyCode = nil
+		self._capturing = false
+		self._active = false
+
+		-- Parse Default
+		if options.Default ~= nil then
+			self:SetValue(options.Default)
+		end
+
+		self.HasDesc = self.Description ~= nil and self.Description ~= ""
+		local h = self.HasDesc and theme.DescHeight or theme.ElementHeight
+		local btnW = 100
+		local btnOff = btnW + 12
+
+		self.Container = U.Create("Frame", {
+			Name = "Keybind",
+			Size = UDim2.new(1, -12, 0, h + 6),
+			Position = UDim2.fromOffset(6, 0),
+			BackgroundColor3 = theme.Element,
+			BackgroundTransparency = 0,
+			BorderSizePixel = 0,
+			Parent = parent,
+		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = self.Container })
+		U.Create("UIStroke", { Color = theme.ElementBorder, Transparency = 0.6, Thickness = 1, Parent = self.Container })
+
+		-- Label
+		self.Label = U.Create("TextLabel", {
+			Name = "Label",
+			Size = UDim2.new(1, -(btnW + 20), 0, 20),
+			Position = UDim2.fromOffset(10, self.HasDesc and 6 or (h + 6 - 20) / 2 + 1),
+			BackgroundTransparency = 1,
+			Text = self.Text,
+			Font = theme.Font,
+			TextSize = theme.FontSize,
+			TextColor3 = theme.TextPrimary,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			RichText = true,
+			Parent = self.Container,
+		})
+
+		-- Capture button (right side)
+		self.CaptureBtn = U.Create("TextButton", {
+			Name = "CaptureBtn",
+			Size = UDim2.fromOffset(btnW, 26),
+			Position = UDim2.new(1, -btnOff, 0.5, -13),
+			BackgroundColor3 = theme.ElementHover,
+			BackgroundTransparency = 0,
+			Text = "",
+			AutoButtonColor = false,
+			Parent = self.Container,
+		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.CaptureBtn })
+
+		self.KeyLabel = U.Create("TextLabel", {
+			Name = "KeyLabel",
+			Size = UDim2.new(1, -8, 1, 0),
+			Position = UDim2.fromOffset(4, 0),
+			BackgroundTransparency = 1,
+			Text = "None",
+			Font = theme.FontBold,
+			TextSize = theme.FontSizeSmall,
+			TextColor3 = theme.TextMuted,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			Parent = self.CaptureBtn,
+		})
+
+		-- Description
+		if self.HasDesc then
+			U.Create("TextLabel", {
+				Name = "Description",
+				Size = UDim2.new(1, -(btnW + 20), 0, 16),
+				Position = UDim2.fromOffset(10, 28),
+				BackgroundTransparency = 1,
+				Text = self.Description,
+				Font = theme.Font,
+				TextSize = theme.FontSizeSmall,
+				TextColor3 = theme.TextMuted,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				RichText = true,
+				Parent = self.Container,
+			})
+		end
+
+		-- Hover / Click for capture button
+		self.CaptureBtn.MouseEnter:Connect(function()
+			if self._capturing then return end
+			self.CaptureBtn.BackgroundColor3 = theme.Element
+		end)
+		self.CaptureBtn.MouseLeave:Connect(function()
+			if self._capturing then return end
+			self.CaptureBtn.BackgroundColor3 = theme.ElementHover
+		end)
+		self.CaptureBtn.MouseButton1Click:Connect(function()
+			self:_toggleCapture()
+		end)
+
+		-- Register with menu's keybind router
+		if menuRef then
+			menuRef:_registerKeybind(self)
+		end
+
+		return self
+	end
+
+	function Keybind:_formatKeyName()
+		if not self._keyCode then return "None" end
+		local s = tostring(self._keyCode)
+		if self._inputType == "MouseButton" then
+			return (s:match("Enum%.UserInputType%.(.+)")) or s
+		end
+		return (s:match("Enum%.KeyCode%.(.+)")) or "?"
+	end
+
+	function Keybind:_updateDisplay()
+		local name = self:_formatKeyName()
+		self.KeyLabel.Text = name
+		self.KeyLabel.TextColor3 = self._keyCode and self.Theme.TextPrimary or self.Theme.TextMuted
+	end
+
+	function Keybind:_toggleCapture()
+		if self._capturing then self:_exitCapture(); return end
+		self._capturing = true
+		self.KeyLabel.Text = "..."
+		self.KeyLabel.TextColor3 = self.Theme.Accent
+		self.CaptureBtn.BackgroundColor3 = self.Theme.Accent
+		if self._menu then self._menu._capturingKeybind = self end
+	end
+
+	function Keybind:_exitCapture()
+		self._capturing = false
+		if self._menu then self._menu._capturingKeybind = nil end
+		self.CaptureBtn.BackgroundColor3 = self.Theme.ElementHover
+		self:_updateDisplay()
+	end
+
+	function Keybind:_onInput(input)
+		if self.Mode == "Hold" then
+			self._active = true
+			self.Callback(true, input)
+		else
+			self._active = not self._active
+			self.Callback(self._active, input)
+		end
+	end
+
+	function Keybind:_onInputEnd(input)
+		if self.Mode == "Hold" then
+			self._active = false
+			self.Callback(false, input)
+		end
+	end
+
+	function Keybind:_setFromInput(input)
+		if input.UserInputType == Enum.UserInputType.Keyboard then
+			self._inputType = "Keyboard"
+			self._keyCode = input.KeyCode
+		elseif input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.MouseButton2
+			or input.UserInputType == Enum.UserInputType.MouseButton3 then
+			self._inputType = "MouseButton"
+			self._keyCode = input.UserInputType
+		end
+		self:_updateDisplay()
+	end
+
+	function Keybind:SetValue(v)
+		if v == nil then
+			self._inputType = nil
+			self._keyCode = nil
+			self:_updateDisplay()
+			return
+		end
+		if typeof(v) == "EnumItem" then
+			if v.EnumType == Enum.KeyCode then
+				self._inputType = "Keyboard"
+				self._keyCode = v
+				self:_updateDisplay()
+				return
+			elseif v.EnumType == Enum.UserInputType then
+				self._inputType = "MouseButton"
+				self._keyCode = v
+				self:_updateDisplay()
+				return
+			end
+		end
+		if type(v) == "string" then
+			-- Try KeyCode first, then UserInputType
+			for _, item in ipairs(Enum.KeyCode:GetEnumItems()) do
+				if item.Name == v then
+					self._inputType = "Keyboard"
+					self._keyCode = item
+					self:_updateDisplay()
+					return
+				end
+			end
+			for _, item in ipairs(Enum.UserInputType:GetEnumItems()) do
+				if item.Name == v then
+					self._inputType = "MouseButton"
+					self._keyCode = item
+					self:_updateDisplay()
+					return
+				end
+			end
+		end
+	end
+
+	function Keybind:GetValue()
+		if not self._keyCode then return nil end
+		local s = tostring(self._keyCode)
+		if self._inputType == "Keyboard" then
+			return (s:match("Enum%.KeyCode%.(.+)"))
+		else
+			return (s:match("Enum%.UserInputType%.(.+)"))
+		end
+	end
+
+	function Keybind:SetMode(mode)
+		self.Mode = mode
+	end
+
+	function Keybind:Destroy()
+		if self._menu then
+			self._menu:_unregisterKeybind(self)
+			if self._menu._capturingKeybind == self then
+				self._menu._capturingKeybind = nil
+			end
+		end
+		if self.Container then self.Container:Destroy() end
+	end
+
+	function Keybind:ApplyTheme(theme)
+		self.Theme = theme
+		if not self.Container then return end
+		self.Container.BackgroundColor3 = theme.Element
+		local stroke = self.Container:FindFirstChildOfClass("UIStroke")
+		if stroke then stroke.Color = theme.ElementBorder end
+		self.Label.Font = theme.Font
+		self.Label.TextSize = theme.FontSize
+		self.Label.TextColor3 = theme.TextPrimary
+		local desc = self.Container:FindFirstChild("Description")
+		if desc then
+			desc.Font = theme.Font
+			desc.TextSize = theme.FontSizeSmall
+			desc.TextColor3 = theme.TextMuted
+		end
+		if not self._capturing then
+			self.CaptureBtn.BackgroundColor3 = theme.ElementHover
+		end
+		self.KeyLabel.Font = theme.FontBold
+		self.KeyLabel.TextSize = theme.FontSizeSmall
+		self:_updateDisplay()
+	end
+
+	--[[ TextInput ]]
+	local TextInput = {}
+	TextInput.__index = TextInput
+
+	function TextInput.new(parent, options, theme)
+		local self = setmetatable({}, TextInput)
+		self.Text = options.Text or "Input"
+		self.Description = options.Description
+		self.Placeholder = options.Placeholder or ""
+		self.ClearTextOnFocus = options.ClearTextOnFocus or false
+		self.Numeric = options.Numeric or false
+		self.Callback = options.Callback or function() end
+		self.Flag = options.Flag
+		self.Theme = theme
+		self._lastValidValue = nil
+		self._value = ""
+
+		self.HasDesc = self.Description ~= nil and self.Description ~= ""
+		local h = self.HasDesc and theme.DescHeight or theme.ElementHeight
+		local textBoxW = 100
+		local textBoxOff = textBoxW + 12
+
+		self.Container = U.Create("Frame", {
+			Name = "TextInput",
+			Size = UDim2.new(1, -12, 0, h + 6),
+			Position = UDim2.fromOffset(6, 0),
+			BackgroundColor3 = theme.Element,
+			BackgroundTransparency = 0,
+			BorderSizePixel = 0,
+			Parent = parent,
+		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = self.Container })
+		U.Create("UIStroke", { Color = theme.ElementBorder, Transparency = 0.6, Thickness = 1, Parent = self.Container })
+
+		-- Label
+		self.Label = U.Create("TextLabel", {
+			Name = "Label",
+			Size = UDim2.new(1, -(textBoxW + 20), 0, 20),
+			Position = UDim2.fromOffset(10, self.HasDesc and 6 or (h + 6 - 20) / 2 + 1),
+			BackgroundTransparency = 1,
+			Text = self.Text,
+			Font = theme.Font,
+			TextSize = theme.FontSize,
+			TextColor3 = theme.TextPrimary,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			RichText = true,
+			Parent = self.Container,
+		})
+
+		-- TextBox (right side)
+		self.TextBox = U.Create("TextBox", {
+			Name = "TextBox",
+			Size = UDim2.fromOffset(textBoxW, 26),
+			Position = UDim2.new(1, -textBoxOff, 0.5, -13),
+			BackgroundColor3 = theme.ElementHover,
+			BackgroundTransparency = 0,
+			Text = "",
+			PlaceholderText = self.Placeholder,
+			Font = theme.Font,
+			TextSize = theme.FontSizeSmall,
+			TextColor3 = theme.TextPrimary,
+			PlaceholderColor3 = theme.TextMuted,
+			ClearTextOnFocus = self.ClearTextOnFocus,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			Parent = self.Container,
+		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = self.TextBox })
+
+		-- Set default value
+		if options.Default ~= nil then
+			self:SetValue(tostring(options.Default), true)
+		end
+
+		-- Hover
+		self.TextBox.MouseEnter:Connect(function()
+			self.TextBox.BackgroundColor3 = theme.Element
+		end)
+		self.TextBox.MouseLeave:Connect(function()
+			self.TextBox.BackgroundColor3 = theme.ElementHover
+		end)
+
+		-- Focus gained
+		self.TextBox.Focused:Connect(function()
+			self.TextBox.BackgroundColor3 = theme.Element
+		end)
+
+		-- Focus lost: validate numeric, commit value
+		self.TextBox.FocusLost:Connect(function(enterPressed)
+			self.TextBox.BackgroundColor3 = theme.ElementHover
+			if self.Numeric then
+				local num = tonumber(self.TextBox.Text)
+				if num ~= nil then
+					self._lastValidValue = num
+					self._value = tostring(num)
+					self.TextBox.Text = self._value
+				else
+					-- Revert to last valid value
+					if self._lastValidValue ~= nil then
+						self._value = tostring(self._lastValidValue)
+					else
+						self._value = ""
+					end
+					self.TextBox.Text = self._value
+				end
+			else
+				self._value = self.TextBox.Text
+			end
+			task.spawn(function() self.Callback(self._value, enterPressed) end)
+		end)
+
+		-- Description
+		if self.HasDesc then
+			U.Create("TextLabel", {
+				Name = "Description",
+				Size = UDim2.new(1, -(textBoxW + 20), 0, 16),
+				Position = UDim2.fromOffset(10, 28),
+				BackgroundTransparency = 1,
+				Text = self.Description,
+				Font = theme.Font,
+				TextSize = theme.FontSizeSmall,
+				TextColor3 = theme.TextMuted,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				RichText = true,
+				Parent = self.Container,
+			})
+		end
+
+		return self
+	end
+
+	function TextInput:SetValue(value, noCallback)
+		if self.Numeric then
+			local num = tonumber(value)
+			if num ~= nil then
+				self._lastValidValue = num
+				self._value = tostring(num)
+				if self.TextBox then self.TextBox.Text = self._value end
+			end
+		else
+			self._value = tostring(value)
+			if self.TextBox then self.TextBox.Text = self._value end
+		end
+		if not noCallback then
+			task.spawn(function() self.Callback(self._value, false) end)
+		end
+	end
+
+	function TextInput:GetValue()
+		if self.Numeric then
+			return tonumber(self._value) or 0
+		end
+		return self._value
+	end
+
+	function TextInput:Focus()
+		if self.TextBox then
+			self.TextBox:CaptureFocus()
+		end
+	end
+
+	function TextInput:Destroy()
+		if self.Container then self.Container:Destroy() end
+	end
+
+	function TextInput:ApplyTheme(theme)
+		self.Theme = theme
+		if not self.Container then return end
+		self.Container.BackgroundColor3 = theme.Element
+		local stroke = self.Container:FindFirstChildOfClass("UIStroke")
+		if stroke then stroke.Color = theme.ElementBorder end
+		self.Label.Font = theme.Font
+		self.Label.TextSize = theme.FontSize
+		self.Label.TextColor3 = theme.TextPrimary
+		local desc = self.Container:FindFirstChild("Description")
+		if desc then
+			desc.Font = theme.Font
+			desc.TextSize = theme.FontSizeSmall
+			desc.TextColor3 = theme.TextMuted
+		end
+		self.TextBox.BackgroundColor3 = theme.ElementHover
+		self.TextBox.Font = theme.Font
+		self.TextBox.TextSize = theme.FontSizeSmall
+		self.TextBox.TextColor3 = theme.TextPrimary
+		self.TextBox.PlaceholderColor3 = theme.TextMuted
+	end
+
 	--[[ Tab ]]
 	local Tab = {}
 	Tab.__index = Tab
@@ -877,6 +1401,7 @@ return (function()
 	function Tab:Toggle(options)
 		local toggle = Toggle.new(self.Container, options, self.Theme)
 		table.insert(self.Components, toggle)
+		if toggle.Flag then self.Menu:_trackFlagged(toggle) end
 		return toggle
 	end
 
@@ -886,6 +1411,7 @@ return (function()
 		local hasDesc = options.Description ~= nil and options.Description ~= ""
 		local h = hasDesc and theme.DescHeight or theme.ElementHeight
 		local btn = {}
+		local _btnTextColor = options.Color
 
 		btn.Container = U.Create("ImageButton", {
 			Name = "Button",
@@ -987,6 +1513,16 @@ return (function()
 		end
 		btn.SetCallback = function(cb) options.Callback = cb end
 		btn.Destroy = function() if btn.Container then btn.Container:Destroy() end end
+		btn.ApplyTheme = function(t)
+			if not btn.Container then return end
+			btn.Container.BackgroundColor3 = t.Element
+			local stroke = btn.Container:FindFirstChildOfClass("UIStroke")
+			if stroke then stroke.Color = t.ElementBorder end
+			local txt = btn.Container:FindFirstChild("Text")
+			if txt then txt.Font = t.Font; txt.TextSize = t.FontSize; txt.TextColor3 = _btnTextColor or t.TextPrimary end
+			local desc = btn.Container:FindFirstChild("Description")
+			if desc then desc.Font = t.Font; desc.TextSize = t.FontSizeSmall; desc.TextColor3 = t.TextMuted end
+		end
 
 		table.insert(self.Components, btn)
 		return btn
@@ -997,6 +1533,8 @@ return (function()
 		local hasDesc = options.Description ~= nil and options.Description ~= ""
 		local h = hasDesc and self.Theme.DescHeight or self.Theme.ElementHeight
 		local lbl = {}
+		local _labelColor = options.Color
+		local _labelTextSize = options.TextSize or self.Theme.FontSize
 
 		lbl.Container = U.Create("Frame", {
 			Name = "Label",
@@ -1012,8 +1550,8 @@ return (function()
 			BackgroundTransparency = 1,
 			Text = options.Text or "",
 			Font = self.Theme.Font,
-			TextSize = options.TextSize or self.Theme.FontSize,
-			TextColor3 = options.Color or self.Theme.TextSecondary,
+			TextSize = _labelTextSize,
+			TextColor3 = _labelColor or self.Theme.TextSecondary,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			RichText = true,
 			Parent = lbl.Container,
@@ -1038,6 +1576,14 @@ return (function()
 		lbl.SetText = function(text) lbl.TextLabel.Text = text end
 		lbl.SetColor = function(c) lbl.TextLabel.TextColor3 = c end
 		lbl.Destroy = function() if lbl.Container then lbl.Container:Destroy() end end
+		lbl.ApplyTheme = function(t)
+			if not lbl.TextLabel then return end
+			lbl.TextLabel.Font = t.Font
+			lbl.TextLabel.TextSize = _labelTextSize
+			lbl.TextLabel.TextColor3 = _labelColor or t.TextSecondary
+			local d = lbl.Container:FindFirstChild("Description")
+			if d then d.Font = t.Font; d.TextSize = t.FontSizeSmall; d.TextColor3 = t.TextMuted end
+		end
 
 		table.insert(self.Components, lbl)
 		return lbl
@@ -1048,6 +1594,8 @@ return (function()
 		local hasDesc = options.Description ~= nil and options.Description ~= ""
 		local h = hasDesc and self.Theme.DescHeight or self.Theme.ElementHeight
 		local lbl = {}
+		local _blColor = options.Color
+		local _blTextSize = options.TextSize or self.Theme.FontSizeTitle
 
 		lbl.Container = U.Create("Frame", {
 			Name = "BoldLabel",
@@ -1063,8 +1611,8 @@ return (function()
 			BackgroundTransparency = 1,
 			Text = options.Text or "",
 			Font = self.Theme.FontBold,
-			TextSize = options.TextSize or self.Theme.FontSizeTitle,
-			TextColor3 = options.Color or self.Theme.TextPrimary,
+			TextSize = _blTextSize,
+			TextColor3 = _blColor or self.Theme.TextPrimary,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			RichText = true,
 			Parent = lbl.Container,
@@ -1089,6 +1637,14 @@ return (function()
 		lbl.SetText = function(text) lbl.TextLabel.Text = text end
 		lbl.SetColor = function(c) lbl.TextLabel.TextColor3 = c end
 		lbl.Destroy = function() if lbl.Container then lbl.Container:Destroy() end end
+		lbl.ApplyTheme = function(t)
+			if not lbl.TextLabel then return end
+			lbl.TextLabel.Font = t.FontBold
+			lbl.TextLabel.TextSize = _blTextSize
+			lbl.TextLabel.TextColor3 = _blColor or t.TextPrimary
+			local d = lbl.Container:FindFirstChild("Description")
+			if d then d.Font = t.Font; d.TextSize = t.FontSizeSmall; d.TextColor3 = t.TextMuted end
+		end
 
 		table.insert(self.Components, lbl)
 		return lbl
@@ -1111,6 +1667,10 @@ return (function()
 			Parent = div.Container,
 		})
 		div.Destroy = function() if div.Container then div.Container:Destroy() end end
+		div.ApplyTheme = function(t)
+			local line = div.Container:FindFirstChild("Line")
+			if line then line.BackgroundColor3 = t.Border end
+		end
 		table.insert(self.Components, div)
 		return div
 	end
@@ -1118,13 +1678,29 @@ return (function()
 	function Tab:Slider(options)
 		local slider = Slider.new(self.Container, options, self.Theme)
 		table.insert(self.Components, slider)
+		if slider.Flag then self.Menu:_trackFlagged(slider) end
 		return slider
 	end
 
 	function Tab:Dropdown(options)
 		local dd = Dropdown.new(self.Container, options, self.Theme, self.Menu)
 		table.insert(self.Components, dd)
+		if dd.Flag then self.Menu:_trackFlagged(dd) end
 		return dd
+	end
+
+	function Tab:Keybind(options)
+		local kb = Keybind.new(self.Container, options, self.Theme, self.Menu)
+		table.insert(self.Components, kb)
+		if kb.Flag then self.Menu:_trackFlagged(kb) end
+		return kb
+	end
+
+	function Tab:Input(options)
+		local ti = TextInput.new(self.Container, options, self.Theme)
+		table.insert(self.Components, ti)
+		if ti.Flag then self.Menu:_trackFlagged(ti) end
+		return ti
 	end
 
 	--[[ Checkbox ]]
@@ -1136,6 +1712,7 @@ return (function()
 		self.Text = options.Text or "Checkbox"
 		self.Value = options.Default or false
 		self.Callback = options.Callback or function() end
+		self.Flag = options.Flag
 		self.Theme = theme
 		self.HasDesc = options.Description ~= nil and options.Description ~= ""
 		local h = self.HasDesc and theme.DescHeight or theme.ElementHeight
@@ -1244,6 +1821,25 @@ return (function()
 	end
 	function Checkbox:GetValue() return self.Value end
 	function Checkbox:Destroy() if self.Container then self.Container:Destroy() end end
+
+	function Checkbox:ApplyTheme(theme)
+		self.Theme = theme
+		if not self.Container then return end
+		self.Container.BackgroundColor3 = theme.Element
+		local stroke = self.Container:FindFirstChildOfClass("UIStroke")
+		if stroke then stroke.Color = theme.ElementBorder end
+		self.Label.Font = theme.Font
+		self.Label.TextSize = theme.FontSize
+		self.Label.TextColor3 = theme.TextPrimary
+		local desc = self.Container:FindFirstChild("Description")
+		if desc then
+			desc.Font = theme.Font
+			desc.TextSize = theme.FontSizeSmall
+			desc.TextColor3 = theme.TextMuted
+		end
+		self.Box.BackgroundColor3 = self.Value and theme.Accent or theme.ElementHover
+		self.Check.Font = theme.FontBold
+	end
 
 	--[[ Collapsible Section ]]
 	local Collapsible = {}
@@ -1389,10 +1985,12 @@ return (function()
 	end
 
 	-- Pass-through methods (all default opts to {})
-	function Collapsible:Toggle(opts) opts = opts or {}; local c = Toggle.new(self.Content, opts, self.Theme); table.insert(self.Components, c); self:_updateSize(); return c end
-	function Collapsible:Checkbox(opts) opts = opts or {}; local c = Checkbox.new(self.Content, opts, self.Theme); table.insert(self.Components, c); self:_updateSize(); return c end
-	function Collapsible:Slider(opts) opts = opts or {}; local c = Slider.new(self.Content, opts, self.Theme); table.insert(self.Components, c); self:_updateSize(); return c end
-	function Collapsible:Dropdown(opts) opts = opts or {}; local c = Dropdown.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); self:_updateSize(); return c end
+	function Collapsible:Toggle(opts) opts = opts or {}; local c = Toggle.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; self:_updateSize(); return c end
+	function Collapsible:Checkbox(opts) opts = opts or {}; local c = Checkbox.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; self:_updateSize(); return c end
+	function Collapsible:Slider(opts) opts = opts or {}; local c = Slider.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; self:_updateSize(); return c end
+	function Collapsible:Dropdown(opts) opts = opts or {}; local c = Dropdown.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; self:_updateSize(); return c end
+	function Collapsible:Keybind(opts) opts = opts or {}; local c = Keybind.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; self:_updateSize(); return c end
+	function Collapsible:Input(opts) opts = opts or {}; local c = TextInput.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; self:_updateSize(); return c end
 	function Collapsible:Button(opts)
 		opts = opts or {}
 		local theme = self.Theme
@@ -1418,6 +2016,17 @@ return (function()
 		btn.Container.MouseButton1Up:Connect(function() game:GetService("TweenService"):Create(_sc, TweenInfo.new(0.08), { Scale = 1 }):Play() end)
 		btn.Container.MouseButton1Click:Connect(function() if opts.Callback then opts.Callback() end end)
 		btn.Destroy = function() if btn.Container then btn.Container:Destroy() end end
+		local _btnColor = opts.Color
+		btn.ApplyTheme = function(t)
+			if not btn.Container then return end
+			btn.Container.BackgroundColor3 = t.Element
+			local s = btn.Container:FindFirstChildOfClass("UIStroke")
+			if s then s.Color = t.ElementBorder end
+			local txt = btn.Container:FindFirstChild("Text")
+			if txt then txt.Font = t.Font; txt.TextSize = t.FontSize; txt.TextColor3 = _btnColor or t.TextPrimary end
+			local d = btn.Container:FindFirstChild("Description")
+			if d then d.Font = t.Font; d.TextSize = t.FontSizeSmall; d.TextColor3 = t.TextMuted end
+		end
 		table.insert(self.Components, btn); self:_updateSize(); return btn
 	end
 	function Collapsible:Label(opts)
@@ -1426,10 +2035,20 @@ return (function()
 		local hasDesc = opts.Description ~= nil and opts.Description ~= ""
 		local h = hasDesc and theme.DescHeight or theme.ElementHeight
 		local lbl = {}
+		local _lblColor = opts.Color
+		local _lblTextSize = opts.TextSize or theme.FontSize
 		lbl.Container = U.Create("Frame", { Name = "Label", Size = UDim2.new(1, 0, 0, h), BackgroundTransparency = 1, Parent = self.Content })
-		lbl.TextLabel = U.Create("TextLabel", { Name = "Text", Size = UDim2.new(1, 0, 0, hasDesc and 20 or h), Position = UDim2.fromOffset(0, hasDesc and 2 or (h - 20) / 2 + 1), BackgroundTransparency = 1, Text = opts.Text or "", Font = theme.Font, TextSize = opts.TextSize or theme.FontSize, TextColor3 = opts.Color or theme.TextSecondary, TextXAlignment = Enum.TextXAlignment.Left, RichText = true, Parent = lbl.Container })
+		lbl.TextLabel = U.Create("TextLabel", { Name = "Text", Size = UDim2.new(1, 0, 0, hasDesc and 20 or h), Position = UDim2.fromOffset(0, hasDesc and 2 or (h - 20) / 2 + 1), BackgroundTransparency = 1, Text = opts.Text or "", Font = theme.Font, TextSize = _lblTextSize, TextColor3 = _lblColor or theme.TextSecondary, TextXAlignment = Enum.TextXAlignment.Left, RichText = true, Parent = lbl.Container })
 		if hasDesc then U.Create("TextLabel", { Name = "Description", Size = UDim2.new(1, 0, 0, 16), Position = UDim2.fromOffset(0, 24), BackgroundTransparency = 1, Text = opts.Description, Font = theme.Font, TextSize = theme.FontSizeSmall, TextColor3 = theme.TextMuted, TextXAlignment = Enum.TextXAlignment.Left, RichText = true, Parent = lbl.Container }) end
 		lbl.Destroy = function() if lbl.Container then lbl.Container:Destroy() end end
+		lbl.ApplyTheme = function(t)
+			if not lbl.TextLabel then return end
+			lbl.TextLabel.Font = t.Font
+			lbl.TextLabel.TextSize = _lblTextSize
+			lbl.TextLabel.TextColor3 = _lblColor or t.TextSecondary
+			local d = lbl.Container:FindFirstChild("Description")
+			if d then d.Font = t.Font; d.TextSize = t.FontSizeSmall; d.TextColor3 = t.TextMuted end
+		end
 		table.insert(self.Components, lbl); self:_updateSize(); return lbl
 	end
 	function Collapsible:BoldLabel(opts)
@@ -1438,13 +2057,23 @@ return (function()
 		local hasDesc = opts.Description ~= nil and opts.Description ~= ""
 		local h = hasDesc and theme.DescHeight or theme.ElementHeight
 		local lbl = {}
+		local _blblColor = opts.Color
+		local _blblTextSize = opts.TextSize or theme.FontSizeTitle
 		lbl.Container = U.Create("Frame", { Name = "BoldLabel", Size = UDim2.new(1, 0, 0, h), BackgroundTransparency = 1, Parent = self.Content })
-		lbl.TextLabel = U.Create("TextLabel", { Name = "Text", Size = UDim2.new(1, 0, 0, hasDesc and 22 or h), Position = UDim2.fromOffset(0, hasDesc and 2 or (h - 22) / 2 + 1), BackgroundTransparency = 1, Text = opts.Text or "", Font = theme.FontBold, TextSize = opts.TextSize or theme.FontSizeTitle, TextColor3 = opts.Color or theme.TextPrimary, TextXAlignment = Enum.TextXAlignment.Left, RichText = true, Parent = lbl.Container })
+		lbl.TextLabel = U.Create("TextLabel", { Name = "Text", Size = UDim2.new(1, 0, 0, hasDesc and 22 or h), Position = UDim2.fromOffset(0, hasDesc and 2 or (h - 22) / 2 + 1), BackgroundTransparency = 1, Text = opts.Text or "", Font = theme.FontBold, TextSize = _blblTextSize, TextColor3 = _blblColor or theme.TextPrimary, TextXAlignment = Enum.TextXAlignment.Left, RichText = true, Parent = lbl.Container })
 		if hasDesc then U.Create("TextLabel", { Name = "Description", Size = UDim2.new(1, 0, 0, 16), Position = UDim2.fromOffset(0, 24), BackgroundTransparency = 1, Text = opts.Description, Font = theme.Font, TextSize = theme.FontSizeSmall, TextColor3 = theme.TextMuted, TextXAlignment = Enum.TextXAlignment.Left, RichText = true, Parent = lbl.Container }) end
 		lbl.Destroy = function() if lbl.Container then lbl.Container:Destroy() end end
+		lbl.ApplyTheme = function(t)
+			if not lbl.TextLabel then return end
+			lbl.TextLabel.Font = t.FontBold
+			lbl.TextLabel.TextSize = _blblTextSize
+			lbl.TextLabel.TextColor3 = _blblColor or t.TextPrimary
+			local d = lbl.Container:FindFirstChild("Description")
+			if d then d.Font = t.Font; d.TextSize = t.FontSizeSmall; d.TextColor3 = t.TextMuted end
+		end
 		table.insert(self.Components, lbl); self:_updateSize(); return lbl
 	end
-	function Collapsible:Divider() local div = {}; div.Container = U.Create("Frame", { Name = "Divider", Size = UDim2.new(1, -20, 0, 1), Position = UDim2.fromOffset(10, 0), BackgroundColor3 = self.Theme.Border, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = self.Content }); table.insert(self.Components, div); self:_updateSize(); return div end
+	function Collapsible:Divider() local div = {}; div.Container = U.Create("Frame", { Name = "Divider", Size = UDim2.new(1, -20, 0, 1), Position = UDim2.fromOffset(10, 0), BackgroundColor3 = self.Theme.Border, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = self.Content }); div.ApplyTheme = function(t) if div.Container then div.Container.BackgroundColor3 = t.Border end end; table.insert(self.Components, div); self:_updateSize(); return div end
 	function Collapsible:Destroy()
 		self._closed = true
 		if self._tween then self._tween:Cancel() end
@@ -1453,10 +2082,29 @@ return (function()
 		if self.Container then self.Container:Destroy() end
 	end
 
+	function Collapsible:ApplyTheme(theme)
+		self.Theme = theme
+		if not self.Container then return end
+		self.Container.BackgroundColor3 = theme.Element
+		local stroke = self.Container:FindFirstChildOfClass("UIStroke")
+		if stroke then stroke.Color = theme.ElementBorder end
+		self.Header.BackgroundColor3 = theme.ElementHover
+		self.Arrow.Font = theme.FontBold
+		self.Arrow.TextColor3 = theme.TextSecondary
+		self.Title.Font = theme.FontBold
+		self.Title.TextSize = theme.FontSize
+		self.Title.TextColor3 = theme.TextPrimary
+		if self._layout then self._layout.Padding = UDim.new(0, theme.Spacing) end
+		for _, c in ipairs(self.Components) do
+			if c.ApplyTheme then c:ApplyTheme(theme) end
+		end
+	end
+
 	--[[ Tab methods ]]
 	function Tab:Checkbox(options)
 		local c = Checkbox.new(self.Container, options, self.Theme)
 		table.insert(self.Components, c)
+		if c.Flag then self.Menu:_trackFlagged(c) end
 		return c
 	end
 	function Tab:Collapsible(title, options)
@@ -1474,6 +2122,37 @@ return (function()
 		if self.TabButton then self.TabButton:Destroy() end
 	end
 
+	function Tab:ApplyTheme(theme)
+		self.Theme = theme
+		if not self.TabButton then return end
+		-- Tab button label
+		local lbl = self.TabButton:FindFirstChild("Label")
+		if lbl then
+			lbl.Font = theme.Font
+			lbl.TextSize = theme.FontSize
+		end
+		-- Container (ScrollingFrame)
+		if self.Container then
+			self.Container.ScrollBarImageColor3 = theme.ScrollBar
+			local layout = self.Container:FindFirstChildOfClass("UIListLayout")
+			if layout then layout.Padding = UDim.new(0, theme.Spacing) end
+		end
+		-- Push to every child component
+		for _, c in ipairs(self.Components) do
+			if c.ApplyTheme then c:ApplyTheme(theme) end
+		end
+		-- Re-apply active/inactive styling
+		if self.Menu and self.Menu.ActiveTab == self then
+			self.TabButton.BackgroundTransparency = 0
+			self.TabButton.BackgroundColor3 = theme.TabActive
+			if self._glow then self._glow.BackgroundTransparency = 0.85 end
+			if lbl then lbl.TextColor3 = theme.SidebarTextActive end
+		else
+			self.TabButton.BackgroundTransparency = 1
+			if lbl then lbl.TextColor3 = theme.SidebarText end
+		end
+	end
+
 	--[[ Menu ]]
 	local Menu = {}
 	Menu.__index = Menu
@@ -1483,11 +2162,16 @@ return (function()
 		self.Options = options
 		self.Theme = theme
 		self.Tabs = {}
+		self._flagRegistry = {}
+		self._keybindList = {}
+		self._capturingKeybind = nil
 		self.ActiveTab = nil
 		self.Visible = options.Visible ~= false
 		self.MinSize = options.MinSize or Vector2.new(320, 300)
 		self.MaxSize = options.MaxSize or Vector2.new(850, 560)
 		self.Resizable = options.Resizable or false
+		self.Scale = options.Scale or 1
+		self._reducedMotion = options.ReducedMotion or false
 
 		local size = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(592, 340)
 		local pos = options.Position or UDim2.new(0.5, -size.X / 2, 0.5, -size.Y / 2)
@@ -1511,6 +2195,8 @@ return (function()
 			Parent = self.Gui,
 		})
 		U.Create("UICorner", { CornerRadius = UDim.new(0, theme.CornerRadius), Parent = self.Frame })
+
+		self._uiScale = U.Create("UIScale", { Parent = self.Frame, Scale = self.Scale })
 
 		if options.HasOutline ~= false then
 			U.Create("UIStroke", {
@@ -2036,6 +2722,66 @@ return (function()
 			self:_resizable()
 		end
 
+		-- Keybind service router (single UIS connection for all keybinds)
+		do
+			local uis = game:GetService("UserInputService")
+			self._keybindInputCon = uis.InputBegan:Connect(function(input, gpe)
+				-- Capture mode: intercept input for the capturing keybind
+				if self._capturingKeybind then
+					local kb = self._capturingKeybind
+					-- Escape cancels capture
+					if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Escape then
+						kb:_exitCapture()
+						return
+					end
+					-- Only capture keyboard keys and mouse buttons
+					if input.UserInputType == Enum.UserInputType.Keyboard
+						or input.UserInputType == Enum.UserInputType.MouseButton1
+						or input.UserInputType == Enum.UserInputType.MouseButton2
+						or input.UserInputType == Enum.UserInputType.MouseButton3 then
+						kb:_setFromInput(input)
+						kb:_exitCapture()
+					end
+					return
+				end
+
+				-- Normal routing: skip if GUI processed the event (TextBox focused etc)
+				if gpe then return end
+
+				-- Route input to matching keybinds
+				for _, kb in ipairs(self._keybindList) do
+					if kb._keyCode then
+						local match = false
+						if input.UserInputType == Enum.UserInputType.Keyboard and kb._inputType == "Keyboard" then
+							match = input.KeyCode == kb._keyCode
+						elseif kb._inputType == "MouseButton" then
+							match = input.UserInputType == kb._keyCode
+						end
+						if match then
+							kb:_onInput(input)
+						end
+					end
+				end
+			end)
+
+			self._keybindEndCon = uis.InputEnded:Connect(function(input, gpe)
+				if gpe then return end
+				for _, kb in ipairs(self._keybindList) do
+					if kb.Mode == "Hold" and kb._keyCode then
+						local match = false
+						if input.UserInputType == Enum.UserInputType.Keyboard and kb._inputType == "Keyboard" then
+							match = input.KeyCode == kb._keyCode
+						elseif kb._inputType == "MouseButton" then
+							match = input.UserInputType == kb._keyCode
+						end
+						if match then
+							kb:_onInputEnd(input)
+						end
+					end
+				end
+			end)
+		end
+
 		return self
 	end
 
@@ -2264,6 +3010,73 @@ return (function()
 
 	function Menu:Tab(options)
 		return Tab.new(self, options)
+	end
+
+	function Menu:_trackFlagged(ctrl)
+		if ctrl.Flag then
+			if self._flagRegistry[ctrl.Flag] ~= nil then
+				warn(("[FyyUI] Duplicate Flag '%s' — overwriting previous controller"):format(ctrl.Flag))
+			end
+			self._flagRegistry[ctrl.Flag] = ctrl
+		end
+	end
+
+	function Menu:_registerKeybind(kb)
+		table.insert(self._keybindList, kb)
+	end
+
+	function Menu:_unregisterKeybind(kb)
+		for i, v in ipairs(self._keybindList) do
+			if v == kb then table.remove(self._keybindList, i); break end
+		end
+	end
+
+	function Menu:ExportConfig()
+		local snapshot = {
+			Schema = "FyyUI.Config.v1",
+			Version = "0.10.0",
+			Values = {},
+		}
+		for flag, ctrl in pairs(self._flagRegistry) do
+			snapshot.Values[flag] = ctrl:GetValue()
+		end
+		return snapshot
+	end
+
+	function Menu:ImportConfig(snapshot, options)
+		if type(snapshot) ~= "table" then
+			return false, "Invalid config: expected a table"
+		end
+		if type(snapshot.Values) ~= "table" then
+			return false, "Invalid config: missing Values table"
+		end
+		local noCallbacks = options and options.NoCallbacks == true
+		for flag, value in pairs(snapshot.Values) do
+			local ctrl = self._flagRegistry[flag]
+			if ctrl then
+				local ok, err = pcall(function()
+					if ctrl.Multi then
+						-- Multi-select dropdown: toggle via public SetValue API
+						local targetSet = {}
+						if type(value) == "table" then
+							for _, opt in ipairs(value) do
+								targetSet[opt] = true
+							end
+						end
+						for _, opt in ipairs(ctrl.Options) do
+							local isSelected = ctrl._selected[opt] == true
+							local shouldSelect = targetSet[opt] == true
+							if isSelected ~= shouldSelect then
+								ctrl:SetValue(opt)
+							end
+						end
+					else
+						ctrl:SetValue(value, noCallbacks)
+					end
+				end)
+			end
+		end
+		return true
 	end
 
 	function Menu:Notify(options)
@@ -2654,6 +3467,9 @@ return (function()
 		if self._minDragInputCon then self._minDragInputCon:Disconnect(); self._minDragInputCon = nil end
 		if self._resizeInputCon then self._resizeInputCon:Disconnect(); self._resizeInputCon = nil end
 		if self._resizeEndCon then self._resizeEndCon:Disconnect(); self._resizeEndCon = nil end
+		if self._keybindInputCon then self._keybindInputCon:Disconnect(); self._keybindInputCon = nil end
+		if self._keybindEndCon then self._keybindEndCon:Disconnect(); self._keybindEndCon = nil end
+		if self._scaleTween then self._scaleTween:Cancel(); self._scaleTween = nil end
 
 		-- Destroy external ScreenGuis owned by this menu
 		if self._notifGui then self._notifGui:Destroy(); self._notifGui = nil end
@@ -2685,8 +3501,142 @@ return (function()
 		if self.Gui then self.Gui:Destroy(); self.Gui = nil end
 	end
 
+	function Menu:_ApplyTheme(theme)
+		if not self.Frame then return end
+
+		-- Main frame
+		self.Frame.BackgroundColor3 = theme.Background
+		local corner = self.Frame:FindFirstChildOfClass("UICorner")
+		if corner then corner.CornerRadius = UDim.new(0, theme.CornerRadius) end
+		local frameStroke = self.Frame:FindFirstChildOfClass("UIStroke")
+		if frameStroke then frameStroke.Color = theme.Outline end
+
+		-- Shadow
+		if self._shadow then
+			self._shadow.BackgroundColor3 = theme.Shadow
+			local shadowCorner = self._shadow:FindFirstChildOfClass("UICorner")
+			if shadowCorner then shadowCorner.CornerRadius = UDim.new(0, theme.CornerRadius + 2) end
+		end
+
+		-- Topbar
+		self.Topbar.BackgroundColor3 = theme.Topbar
+		local topCorner = self.Topbar:FindFirstChildOfClass("UICorner")
+		if topCorner then topCorner.CornerRadius = UDim.new(0, theme.CornerRadius) end
+		local topFill = self.Topbar:FindFirstChild("Fill")
+		if topFill then topFill.BackgroundColor3 = theme.Topbar end
+
+		-- Title
+		self.Title.TextColor3 = theme.TextPrimary
+		self.Title.Font = theme.FontBold
+		self.Title.TextSize = theme.FontSizeTitle
+
+		-- Status label (Stats)
+		if self.StatusLabel then
+			self.StatusLabel.TextColor3 = theme.TextPrimary
+			self.StatusLabel.Font = theme.FontBold
+			self.StatusLabel.TextSize = theme.FontSizeSmall
+		end
+
+		-- Accent line under topbar
+		if self.AccentLine then
+			self.AccentLine.BackgroundColor3 = theme.AccentLine
+		end
+
+		-- Sidebar
+		self.Sidebar.BackgroundColor3 = theme.Sidebar
+
+		-- ActiveBar
+		if self.ActiveBar then
+			self.ActiveBar.BackgroundColor3 = theme.Accent
+		end
+
+		-- Resize grip
+		local grip = self.Frame:FindFirstChild("ResizeGrip")
+		if grip then grip.BackgroundColor3 = theme.TextMuted end
+
+		-- No-logo restore button (minimize affordance)
+		if self._noLogoRestoreBtn then
+			self._noLogoRestoreBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20) -- keep dark
+		end
+
+		-- Confirm-close popup (if open)
+		if self._confirmPopup then
+			local pop = self._confirmPopup.popup
+			if pop then
+				pop.BackgroundColor3 = theme.Sidebar
+				local labels = pop:FindFirstChildOfClass("TextLabel")
+				-- iterate all text labels
+				for _, lbl in ipairs(pop:GetChildren()) do
+					if lbl:IsA("TextLabel") then
+						lbl.Font = theme.Font
+					end
+				end
+			end
+		end
+
+		-- Active notification styling
+		if self.NotifBox then
+			for _, notif in ipairs(self.NotifBox:GetChildren()) do
+				if notif:IsA("Frame") then
+					notif.BackgroundColor3 = theme.Element
+					local txt = notif:FindFirstChild("Text")
+					if txt and txt:IsA("TextLabel") then
+						txt.Font = theme.Font
+						txt.TextSize = theme.FontSize
+						txt.TextColor3 = theme.TextPrimary
+					end
+				end
+			end
+		end
+
+		-- Apply theme to all tabs (which cascade to their components)
+		for _, tab in ipairs(self.Tabs) do
+			tab:ApplyTheme(theme)
+		end
+	end
+
+	function Menu:SetTheme(themeOrName)
+		if type(themeOrName) == "string" then
+			local builtin = Theme[themeOrName]
+			if not builtin then
+				return false, "Unknown built-in theme: " .. tostring(themeOrName)
+			end
+			self.Theme = builtin
+		elseif type(themeOrName) == "table" then
+			if not themeOrName.Background or not themeOrName.TextPrimary then
+				return false, "Theme table must have at least Background and TextPrimary colors"
+			end
+			self.Theme = themeOrName
+		else
+			return false, "Expected a theme name (string) or theme table"
+		end
+		self:_ApplyTheme(self.Theme)
+		return true
+	end
+
+	function Menu:SetScale(value)
+		value = math.clamp(value, 0.75, 1.35)
+		self.Scale = value
+		if not self._uiScale then return end
+		if self._reducedMotion then
+			self._uiScale.Scale = value
+		else
+			if self._scaleTween then self._scaleTween:Cancel() end
+			self._scaleTween = game:GetService("TweenService"):Create(
+				self._uiScale,
+				TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ Scale = value }
+			)
+			self._scaleTween:Play()
+		end
+	end
+
+	function Menu:GetScale()
+		return self.Scale
+	end
+
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.52", Theme = Theme }
+	local FyyUI = { Version = "0.10.0", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
