@@ -1,5 +1,5 @@
 --[[
-	FyyUI v0.2.0
+	FyyUI v0.9.51
 	Roblox UI Library
 	@github FyyWannaFly/FyyUI
 	
@@ -1253,7 +1253,7 @@ return (function()
 		local self = setmetatable({}, Collapsible)
 		self.Theme = theme
 		self.Components = {}
-		self.Open = options and options.DefaultOpen ~= false
+		self._isOpen = options and options.DefaultOpen ~= false
 		self._tween = nil
 		self._closed = false
 
@@ -1287,7 +1287,7 @@ return (function()
 			Size = UDim2.fromOffset(16, 16),
 			Position = UDim2.new(1, -24, 0.5, -8),
 			BackgroundTransparency = 1,
-			Text = self.Open and "▼" or "▶",
+			Text = self._isOpen and "▼" or "▶",
 			Font = theme.FontBold,
 			TextSize = 12,
 			TextColor3 = theme.TextSecondary,
@@ -1339,7 +1339,7 @@ return (function()
 			self.Header.BackgroundTransparency = 0.3
 		end)
 		self.Header.MouseButton1Click:Connect(function()
-			self:Toggle()
+			self:ToggleOpen()
 		end)
 
 		-- Initialize height
@@ -1351,30 +1351,35 @@ return (function()
 		return self
 	end
 
-	function Collapsible:Toggle()
-		self.Open = not self.Open
-		self.Arrow.Text = self.Open and "▼" or "▶"
+	function Collapsible:SetOpen(v)
+		if self._isOpen == v then return end
+		self._isOpen = v
+		self.Arrow.Text = v and "▼" or "▶"
 		if self._tween then self._tween:Cancel() end
 		if not self.Container then return end
 		local ts = game:GetService("TweenService")
 		local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		local contentH = self._layout and self._layout.AbsoluteContentSize.Y or 0
-		local targetH = self.Open and (34 + contentH) or 34
+		local targetH = v and (34 + contentH) or 34
 		self._tween = ts:Create(self.Container, ti, { Size = UDim2.new(1, -12, 0, targetH) }):Play()
 	end
 
+	function Collapsible:ToggleOpen()
+		self:SetOpen(not self._isOpen)
+	end
+
 	function Collapsible:Open()
-		if not self.Open then self:Toggle() end
+		self:SetOpen(true)
 	end
 	function Collapsible:Close()
-		if self.Open then self:Toggle() end
+		self:SetOpen(false)
 	end
 
 	function Collapsible:_updateSize(instant)
 		if self._closed or not self._layout or not self.Container or not self.Container.Parent then return end
 		if self._tween then self._tween:Cancel() end
 		local contentH = self._layout.AbsoluteContentSize.Y
-		local targetH = self.Open and (34 + contentH) or 34
+		local targetH = self._isOpen and (34 + contentH) or 34
 		if instant then
 			self.Container.Size = UDim2.new(1, -12, 0, targetH)
 		else
@@ -1439,7 +1444,7 @@ return (function()
 		lbl.Destroy = function() if lbl.Container then lbl.Container:Destroy() end end
 		table.insert(self.Components, lbl); self:_updateSize(); return lbl
 	end
-	function Collapsible:Divider() opts = opts or {}; local div = {}; div.Container = U.Create("Frame", { Name = "Divider", Size = UDim2.new(1, -20, 0, 1), Position = UDim2.fromOffset(10, 0), BackgroundColor3 = self.Theme.Border, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = self.Content }); table.insert(self.Components, div); self:_updateSize(); return div end
+	function Collapsible:Divider() local div = {}; div.Container = U.Create("Frame", { Name = "Divider", Size = UDim2.new(1, -20, 0, 1), Position = UDim2.fromOffset(10, 0), BackgroundColor3 = self.Theme.Border, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = self.Content }); table.insert(self.Components, div); self:_updateSize(); return div end
 	function Collapsible:Destroy()
 		self._closed = true
 		if self._tween then self._tween:Cancel() end
@@ -1486,6 +1491,8 @@ return (function()
 
 		local size = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(592, 340)
 		local pos = options.Position or UDim2.new(0.5, -size.X / 2, 0.5, -size.Y / 2)
+		self._initialSize = UDim2.fromOffset(size.X, size.Y)
+		self._initialPos = pos
 
 		self.Gui = U.Create("ScreenGui", {
 			Name = options.Title or "FyyUI",
@@ -1609,36 +1616,7 @@ return (function()
 
 			macBtn("Close", btnColors.Close, function() self:_confirmClose() end)
 			macBtn("Minimize", btnColors.Minimize, function()
-				self.Minimized = not self.Minimized
-				local ts = game:GetService("TweenService")
-				local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut)
-				if self.Minimized then
-					self._minPrevSize = self.Frame.Size
-					self._minPrevPos = self.Frame.Position
-					local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or UDim2.new(0,12,0.5,-25)
-					ts:Create(self.Frame, ti, {
-						Size = UDim2.fromOffset(60, 60),
-						Position = iconPos,
-					}):Play()
-					task.delay(0.2, function()
-						if not self.Minimized then return end
-						if self._minGui then
-							self._minGui.Enabled = true
-							self._minGui.Parent = game:GetService("CoreGui")
-						end
-						self.Gui.Enabled = false
-					end)
-				else
-					local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or UDim2.new(0,12,0.5,-25)
-					self.Frame.Size = UDim2.fromOffset(60, 60)
-					self.Frame.Position = iconPos
-					self.Gui.Enabled = true
-					ts:Create(self.Frame, ti, {
-						Size = self._minPrevSize or UDim2.fromOffset(size.X, size.Y),
-						Position = self._minPrevPos or pos,
-					}):Play()
-					if self._minGui then self._minGui.Enabled = false end
-				end
+				if self.Minimized then self:_restore() else self:_minimize() end
 			end)
 			macBtn("Maximize", btnColors.Maximize, function()
 				self.Maximized = not self.Maximized
@@ -1646,6 +1624,7 @@ return (function()
 				if self.Minimized then
 					self.Minimized = false
 					if self._minGui then self._minGui.Enabled = false end
+					if self._noLogoRestoreGui then self._noLogoRestoreGui.Enabled = false end
 				end
 				local ts = game:GetService("TweenService")
 				local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
@@ -1724,6 +1703,7 @@ return (function()
 				if self.Minimized then
 					self.Minimized = false
 					if self._minGui then self._minGui.Enabled = false end
+					if self._noLogoRestoreGui then self._noLogoRestoreGui.Enabled = false end
 				end
 				local ts = game:GetService("TweenService")
 				local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
@@ -1744,36 +1724,11 @@ return (function()
 				if self._updateShadow then self._updateShadow() end
 			end, -66, Color3.fromRGB(45, 45, 55))
 			winBtn("Minimize", function()
-				self.Minimized = not self.Minimized
-				local ts = game:GetService("TweenService")
-				local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut)
 				if self.Minimized then
-					self._minPrevSize = self.Frame.Size
-					self._minPrevPos = self.Frame.Position
-					local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or UDim2.new(0,12,0.5,-25)
-					ts:Create(self.Frame, ti, {
-						Size = UDim2.fromOffset(60, 60),
-						Position = iconPos,
-					}):Play()
-					task.delay(0.2, function()
-						if not self.Minimized then return end
-						if self._minGui then
-							self._minGui.Enabled = true
-							self._minGui.Parent = game:GetService("CoreGui")
-						end
-						self.Gui.Enabled = false
-					end)
-				else
 					resetWinHover()
-					local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or UDim2.new(0,12,0.5,-25)
-					self.Frame.Size = UDim2.fromOffset(60, 60)
-					self.Frame.Position = iconPos
-					self.Gui.Enabled = true
-					ts:Create(self.Frame, ti, {
-						Size = self._minPrevSize or UDim2.fromOffset(size.X, size.Y),
-						Position = self._minPrevPos or pos,
-					}):Play()
-					if self._minGui then self._minGui.Enabled = false end
+					self:_restore()
+				else
+					self:_minimize()
 				end
 			end, -96, Color3.fromRGB(45, 45, 55))
 		end
@@ -2017,7 +1972,7 @@ return (function()
 			U.Create("UICorner", { CornerRadius = UDim.new(0, 10), Parent = minIcon })
 
 			-- Dragging with click/drag distinction
-			local dragging, dragStart, startPos, didDrag, _inputChangedCon
+			local dragging, dragStart, startPos, didDrag
 			self._minFrame.InputBegan:Connect(function(i)
 				if i.UserInputType == Enum.UserInputType.MouseButton1 then
 					dragging = true
@@ -2029,24 +1984,12 @@ return (function()
 			self._minFrame.InputEnded:Connect(function(i)
 				if i.UserInputType == Enum.UserInputType.MouseButton1 then
 					dragging = false
-					-- If didn't drag (click), restore menu
 					if not didDrag then
-						self.Minimized = false
-						local ts = game:GetService("TweenService")
-						local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-						local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or UDim2.new(0,12,0.5,-25)
-						self.Frame.Size = UDim2.fromOffset(60, 60)
-						self.Frame.Position = iconPos
-						self.Gui.Enabled = true
-						ts:Create(self.Frame, ti, {
-							Size = self._minPrevSize or UDim2.fromOffset(size.X, size.Y),
-							Position = self._minPrevPos or pos,
-						}):Play()
-						if self._minGui then self._minGui.Enabled = false end
+						self:_restore()
 					end
 				end
 			end)
-			_inputChangedCon = game:GetService("UserInputService").InputChanged:Connect(function(i)
+			self._minDragInputCon = game:GetService("UserInputService").InputChanged:Connect(function(i)
 				if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
 					local delta = i.Position - dragStart
 					if delta.Magnitude > 5 then didDrag = true end
@@ -2056,6 +1999,32 @@ return (function()
 					)
 					self._minSavedPos = self._minFrame.Position
 				end
+			end)
+		else
+			-- No-logo restore affordance: floating button to restore from minimized state
+			self._noLogoRestoreGui = U.Create("ScreenGui", {
+				Name = "FyyUI_NoLogoRestore",
+				DisplayOrder = 999,
+				ResetOnSpawn = false,
+				Enabled = false,
+			})
+			self._noLogoRestoreBtn = U.Create("TextButton", {
+				Name = "RestoreBtn",
+				Size = UDim2.fromOffset(50, 50),
+				Position = UDim2.new(0.5, -25, 0.5, -25),
+				BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+				BackgroundTransparency = 0,
+				Text = "☰",
+				Font = Enum.Font.GothamBold,
+				TextSize = 24,
+				TextColor3 = Color3.fromRGB(200, 200, 200),
+				AutoButtonColor = false,
+				Parent = self._noLogoRestoreGui,
+			})
+			U.Create("UICorner", { CornerRadius = UDim.new(0, 12), Parent = self._noLogoRestoreBtn })
+			U.Create("UIStroke", { Color = Color3.fromRGB(138, 43, 226), Thickness = 2, Parent = self._noLogoRestoreBtn })
+			self._noLogoRestoreBtn.MouseButton1Click:Connect(function()
+				self:_restore()
 			end)
 		end
 
@@ -2350,7 +2319,7 @@ return (function()
 
 		-- Auto dismiss
 		task.delay(duration, function()
-			if not frame.Parent then return end
+			if self._destroyed or not frame.Parent then return end
 			local fadeOut = ts:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 				Size = UDim2.new(1, 0, 0, 0),
 				BackgroundTransparency = 1,
@@ -2377,7 +2346,7 @@ return (function()
 				sp = frame.Position
 			end
 		end)
-		uis.InputChanged:Connect(function(input, gpe)
+		self._dragInputCon = uis.InputChanged:Connect(function(input, gpe)
 			if gpe then return end
 			if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
 				local delta = input.Position - ds
@@ -2399,6 +2368,56 @@ return (function()
 				dragging = false
 			end
 		end)
+	end
+
+	function Menu:_minimize()
+		if self._destroyed then return end
+		self.Minimized = true
+		self._minPrevSize = self.Frame.Size
+		self._minPrevPos = self.Frame.Position
+
+		local ts = game:GetService("TweenService")
+		local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut)
+		local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or UDim2.new(0,12,0.5,-25)
+
+		ts:Create(self.Frame, ti, {
+			Size = UDim2.fromOffset(60, 60),
+			Position = iconPos,
+		}):Play()
+
+		task.delay(0.2, function()
+			if self._destroyed or not self.Minimized then return end
+			if self._minGui then
+				self._minGui.Enabled = true
+				self._minGui.Parent = game:GetService("CoreGui")
+				self.Gui.Enabled = false
+			elseif self._noLogoRestoreGui then
+				self._noLogoRestoreGui.Enabled = true
+				self._noLogoRestoreGui.Parent = game:GetService("CoreGui")
+				self.Gui.Enabled = false
+			end
+		end)
+	end
+
+	function Menu:_restore()
+		if self._destroyed then return end
+		self.Minimized = false
+
+		local ts = game:GetService("TweenService")
+		local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut)
+		local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or UDim2.new(0,12,0.5,-25)
+
+		self.Frame.Size = UDim2.fromOffset(60, 60)
+		self.Frame.Position = iconPos
+		self.Gui.Enabled = true
+
+		ts:Create(self.Frame, ti, {
+			Size = self._minPrevSize or self._initialSize,
+			Position = self._minPrevPos or self._initialPos,
+		}):Play()
+
+		if self._minGui then self._minGui.Enabled = false end
+		if self._noLogoRestoreGui then self._noLogoRestoreGui.Enabled = false end
 	end
 
 	function Menu:_resizable()
@@ -2575,6 +2594,7 @@ return (function()
 			closing = true
 			ts:Create(overlay, TweenInfo.new(0.2), { BackgroundTransparency = 1 }):Play()
 			task.delay(0.25, function()
+				if self._destroyed then return end
 				if overlay then overlay:Destroy() end
 				if popup then popup:Destroy() end
 				if shadow then shadow:Destroy() end
@@ -2588,16 +2608,47 @@ return (function()
 	end
 
 	function Menu:Destroy()
-		if self._heartbeatCon then self._heartbeatCon:Disconnect() end
+		if self._destroyed then return end
+		self._destroyed = true
+
+		-- Disconnect all service-level connections
+		if self._heartbeatCon then self._heartbeatCon:Disconnect(); self._heartbeatCon = nil end
+		if self._popupUISCon then self._popupUISCon:Disconnect(); self._popupUISCon = nil end
+		if self._dragInputCon then self._dragInputCon:Disconnect(); self._dragInputCon = nil end
+		if self._minDragInputCon then self._minDragInputCon:Disconnect(); self._minDragInputCon = nil end
+
+		-- Destroy external ScreenGuis owned by this menu
+		if self._notifGui then self._notifGui:Destroy(); self._notifGui = nil end
+		if self._minGui then self._minGui:Destroy(); self._minGui = nil end
+		if self._noLogoRestoreGui then self._noLogoRestoreGui:Destroy(); self._noLogoRestoreGui = nil end
+
+		-- Destroy any active confirm-close popup
+		if self._confirmPopup then
+			if self._confirmPopup.overlay then self._confirmPopup.overlay:Destroy() end
+			if self._confirmPopup.popup then self._confirmPopup.popup:Destroy() end
+			if self._confirmPopup.shadow then self._confirmPopup.shadow:Destroy() end
+			self._confirmPopup = nil
+		end
+
+		-- Close any active dropdown popup
+		if self._activePopupFrame then
+			self._activePopupFrame:Destroy()
+			self._activePopupFrame = nil
+		end
+		if self._activeDropdown then self._activeDropdown = nil end
+
+		-- Destroy tabs
 		for _, tab in ipairs(self.Tabs) do
 			tab:Destroy()
 		end
 		self.Tabs = {}
-		if self.Gui then self.Gui:Destroy() end
+
+		-- Destroy main GUI last
+		if self.Gui then self.Gui:Destroy(); self.Gui = nil end
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.9.50", Theme = Theme }
+	local FyyUI = { Version = "0.9.51", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
