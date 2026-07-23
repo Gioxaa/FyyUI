@@ -1,5 +1,5 @@
 --[[
-	FyyUI v0.10.7
+	FyyUI v0.10.8
 	Roblox UI Library
 	@github FyyWannaFly/FyyUI
 	
@@ -143,26 +143,21 @@ return (function()
 		return inst
 	end
 
-	--[[ Icon Module (Lucide/Solar/etc.) — auto-load dari GitHub ]]
+	--[[ Icon Module (Lucide/Solar/etc.) — optional remote loader ]]
+	-- Icons are local by default. Loading and executing source downloaded from a
+	-- URL is intentionally opt-in through FyyUI.LoadRemoteIconModule below.
 	local IconModule = nil
-	do
-		local iconUrl = "https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/lucide/dist/Icons.lua"
-		local raw
-		-- Try multiple HTTP methods
-		local httpMethods = {
-			function() return game:HttpGet(iconUrl) end,
-			function() return game:GetService("HttpService"):GetAsync(iconUrl) end,
-		}
-		for _, method in ipairs(httpMethods) do
-			local ok, result = pcall(method)
-			if ok and result then raw = result; break end
+	local DEFAULT_ICON_MODULE_URL = "https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/lucide/dist/Icons.lua"
+
+	local function isFiniteNumber(value)
+		return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+	end
+
+	local function destroyedResult(controller)
+		if controller._destroyed then
+			return true, false, "destroyed"
 		end
-		if raw then
-			local ok2, mod = pcall(loadstring, raw)
-			if ok2 and mod then
-				IconModule = mod()
-			end
-		end
+		return false
 	end
 
 	local function resolveIcon(icon)
@@ -199,12 +194,24 @@ return (function()
 		return { Image = icon }
 	end
 
+	local function cleanupController(controller)
+		if controller._destroyed then return end
+		controller._destroyed = true
+		local menu = controller._menu
+		if not menu then return end
+		menu:_untrackFlagged(controller)
+		if menu._activeDropdown == controller then
+			menu:HideDropdownPopup()
+		end
+	end
+
 	--[[ Toggle ]]
 	local Toggle = {}
 	Toggle.__index = Toggle
 
 	function Toggle.new(parent, options, theme)
 		local self = setmetatable({}, Toggle)
+		self._setValueNoCallbackPosition = 3
 		self.Text = options.Text or "Toggle"
 		self.Description = options.Description
 		self.Value = options.Default or false
@@ -311,11 +318,15 @@ return (function()
 		end
 	end
 
-	function Toggle:SetValue(value, instant)
-		if self.Value == value then return end
+	function Toggle:SetValue(value, instant, noCallback)
+		local isDestroyed, result, err = destroyedResult(self)
+		if isDestroyed then return result, err end
+		if type(value) ~= "boolean" then return false, "expected boolean" end
+		if self.Value == value then return true end
 		self.Value = value
 		self:_animate(value, instant)
-		task.spawn(function() self.Callback(value) end)
+		if not noCallback then task.spawn(function() self.Callback(value) end) end
+		return true
 	end
 
 	function Toggle:GetValue() return self.Value end
@@ -331,7 +342,11 @@ return (function()
 		local d = self.Container:FindFirstChild("Description")
 		if d then d.Text = desc or "" end
 	end
-	function Toggle:Destroy() if self.Container then self.Container:Destroy() end end
+	function Toggle:Destroy()
+		if self._destroyed then return end
+		cleanupController(self)
+		if self.Container then self.Container:Destroy() end
+	end
 
 	function Toggle:ApplyTheme(theme)
 		self.Theme = theme
@@ -360,11 +375,15 @@ return (function()
 		local self = setmetatable({}, Slider)
 		self.Text = options.Text or "Slider"
 		self.Description = options.Description
-		self.Min = options.Min or 0
-		self.Max = options.Max or 100
-		self.Value = math.clamp(options.Default or self.Min, self.Min, self.Max)
+		self.Min = options.Min == nil and 0 or options.Min
+		self.Max = options.Max == nil and 100 or options.Max
+		self.Step = options.Step == nil and 1 or options.Step
+		assert(isFiniteNumber(self.Min) and isFiniteNumber(self.Max) and self.Min <= self.Max, "FyyUI Slider: Min and Max must be finite numbers with Min <= Max")
+		assert(isFiniteNumber(self.Step) and self.Step > 0, "FyyUI Slider: Step must be a finite number greater than zero")
+		local default = options.Default == nil and self.Min or options.Default
+		assert(isFiniteNumber(default), "FyyUI Slider: Default must be a finite number")
+		self.Value = math.clamp(default, self.Min, self.Max)
 		self.Suffix = options.Suffix or ""
-		self.Step = options.Step or 1
 		self.Callback = options.Callback or function() end
 		self.Flag = options.Flag
 		self.Theme = theme
@@ -456,14 +475,14 @@ return (function()
 
 		local dragging = false
 		self.Knob.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 				dragging = true
 			end
 		end)
 		local dragCon
 		dragCon = uis.InputChanged:Connect(function(input, processed)
 			if processed then return end
-			if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+			if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
 				local absPos = self.Track.AbsolutePosition.X
 				local size = self.Track.AbsoluteSize.X
 				if size <= 0 then return end
@@ -474,7 +493,13 @@ return (function()
 			end
 		end)
 		self.Knob.InputEnded:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = false
+			end
+		end)
+		-- Service-level InputEnded: catches mouse-up even when pointer is no longer over the knob
+		self._sliderEndCon = uis.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 				dragging = false
 			end
 		end)
@@ -482,7 +507,7 @@ return (function()
 
 		-- Click on track to jump
 		self.Track.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 				local absPos = self.Track.AbsolutePosition.X
 				local size = self.Track.AbsoluteSize.X
 				if size <= 0 then return end
@@ -519,8 +544,11 @@ return (function()
 	end
 
 	function Slider:SetValue(v, noCallback)
+		local isDestroyed, result, err = destroyedResult(self)
+		if isDestroyed then return result, err end
+		if not isFiniteNumber(v) then return false, "expected finite number" end
 		v = math.clamp(v, self.Min, self.Max)
-		if self.Value == v then return end
+		if self.Value == v then return true end
 		self.Value = v
 		local pct = (self.Max ~= self.Min) and (v - self.Min) / (self.Max - self.Min) or 0
 		pct = math.clamp(pct, 0, 1)
@@ -530,11 +558,15 @@ return (function()
 		if not noCallback then
 			task.spawn(function() self.Callback(v) end)
 		end
+		return true
 	end
 
 	function Slider:GetValue() return self.Value end
 	function Slider:Destroy()
+		if self._destroyed then return end
+		cleanupController(self)
 		if self._dragCon then self._dragCon:Disconnect() end
+		if self._sliderEndCon then self._sliderEndCon:Disconnect() end
 		if self.Container then self.Container:Destroy() end
 	end
 
@@ -570,7 +602,14 @@ return (function()
 		self._menu = menuRef
 		self.Text = options.Text or "Dropdown"
 		self.Description = options.Description
+		assert(options.Options == nil or type(options.Options) == "table", "FyyUI Dropdown: Options must be a table")
 		self.Options = options.Options or {}
+		local function hasOption(value)
+			for _, option in ipairs(self.Options) do
+				if option == value then return true end
+			end
+			return false
+		end
 		self.Multi = options.Multi or false  -- Multi-Select mode
 		-- AllowNone: if false, single-select always retains a valid option when options exist
 		self.AllowNone = options.AllowNone
@@ -585,6 +624,9 @@ return (function()
 		if not self.Multi and not self.AllowNone and #self.Options > 0 and (self.Value == nil or self.Value == "") then
 			self.Value = self.Options[1]
 		end
+		if not self.Multi and self.Value ~= nil and self.Value ~= "" and not hasOption(self.Value) then
+			self.Value = self.AllowNone and "" or self.Options[1] or ""
+		end
 		self.Placeholder = options.Placeholder or "Not selected"
 		self._selected = {}  -- set of selected values (multi mode)
 		self._selectedCount = 0
@@ -596,8 +638,10 @@ return (function()
 				defaults = { options.Default }
 			end
 			for _, v in ipairs(defaults) do
-				self._selected[v] = true
-				self._selectedCount = self._selectedCount + 1
+				if hasOption(v) and not self._selected[v] then
+					self._selected[v] = true
+					self._selectedCount = self._selectedCount + 1
+				end
 			end
 		end
 		self.Callback = options.Callback or function() end
@@ -677,7 +721,6 @@ return (function()
 			TextColor3 = initSelectColor(),
 			Font = theme.Font,
 			TextSize = theme.FontSize,
-			TextColor3 = theme.TextPrimary,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Parent = self.SelectBtn,
 		})
@@ -777,10 +820,12 @@ return (function()
 		end
 	end
 
-	function Dropdown:SetValue(v)
+	function Dropdown:SetValue(v, noCallback)
+		local isDestroyed, result, err = destroyedResult(self)
+		if isDestroyed then return result, err end
 		if self.Multi then
 			-- Multi-select: toggle the value
-			if not self:_optIndex(self.Options, v) then return end
+			if not self:_optIndex(self.Options, v) then return false, "unknown option" end
 			if self._selected[v] then
 				self._selected[v] = nil
 				self._selectedCount = math.max(0, self._selectedCount - 1)
@@ -801,8 +846,10 @@ return (function()
 				self.SelectText.Text = self._selectedCount .. " selected"
 			end
 			self.SelectText.TextColor3 = (self._selectedCount > 0) and self.Theme.TextPrimary or self.Theme.TextMuted
-			task.spawn(function() self.Callback(self._selected) end)
-			return
+			if not noCallback then
+				task.spawn(function() self.Callback(self._selected) end)
+			end
+			return true
 		end
 
 		-- Single-select
@@ -812,7 +859,7 @@ return (function()
 				self._menu._activeDropdown = nil
 				self._menu:HideDropdownPopup()
 			end
-			return
+			return true
 		end
 		-- AllowNone guard: prevent clearing selection when AllowNone=false and options exist
 		if not self.AllowNone and #self.Options > 0 and v == "" then
@@ -821,8 +868,9 @@ return (function()
 				self._menu._activeDropdown = nil
 				self._menu:HideDropdownPopup()
 			end
-			return
+			return true
 		end
+		if v ~= "" and not self:_optIndex(self.Options, v) then return false, "unknown option" end
 		self.Value = v
 		self.SelectText.Text = (self.Value ~= "") and tostring(self.Value) or self.Placeholder
 		self.SelectText.TextColor3 = (self.Value ~= "") and self.Theme.TextPrimary or self.Theme.TextMuted
@@ -839,7 +887,12 @@ return (function()
 			self._menu._activeDropdown = nil
 			self._menu:HideDropdownPopup()
 		end
-		task.spawn(function() self.Callback(v) end)
+		if not noCallback then
+			task.spawn(function()
+				self.Callback(v)
+			end)
+		end
+		return true
 	end
 
 	function Dropdown:GetValue()
@@ -954,9 +1007,8 @@ return (function()
 	end
 
 	function Dropdown:Destroy()
-		if self._menu and self._menu._activeDropdown == self then
-			self._menu._activeDropdown = nil
-		end
+		if self._destroyed then return end
+		cleanupController(self)
 		if self.Container then self.Container:Destroy() end
 	end
 
@@ -994,6 +1046,7 @@ return (function()
 		self.Text = options.Text or "Keybind"
 		self.Description = options.Description
 		self.Mode = options.Mode or "Toggle"
+		assert(self.Mode == "Toggle" or self.Mode == "Hold", "FyyUI Keybind: Mode must be Toggle or Hold")
 		self.Callback = options.Callback or function() end
 		self.Flag = options.Flag
 		self.Theme = theme
@@ -1171,23 +1224,26 @@ return (function()
 	end
 
 	function Keybind:SetValue(v)
+		local isDestroyed, result, err = destroyedResult(self)
+		if isDestroyed then return result, err end
 		if v == nil then
 			self._inputType = nil
 			self._keyCode = nil
 			self:_updateDisplay()
-			return
+			return true
 		end
 		if typeof(v) == "EnumItem" then
 			if v.EnumType == Enum.KeyCode then
 				self._inputType = "Keyboard"
 				self._keyCode = v
 				self:_updateDisplay()
-				return
-			elseif v.EnumType == Enum.UserInputType then
+				return true
+			elseif v.EnumType == Enum.UserInputType
+				and (v == Enum.UserInputType.MouseButton1 or v == Enum.UserInputType.MouseButton2 or v == Enum.UserInputType.MouseButton3) then
 				self._inputType = "MouseButton"
 				self._keyCode = v
 				self:_updateDisplay()
-				return
+				return true
 			end
 		end
 		if type(v) == "string" then
@@ -1197,18 +1253,19 @@ return (function()
 					self._inputType = "Keyboard"
 					self._keyCode = item
 					self:_updateDisplay()
-					return
+					return true
 				end
 			end
 			for _, item in ipairs(Enum.UserInputType:GetEnumItems()) do
-				if item.Name == v then
+				if item.Name == v and (item == Enum.UserInputType.MouseButton1 or item == Enum.UserInputType.MouseButton2 or item == Enum.UserInputType.MouseButton3) then
 					self._inputType = "MouseButton"
 					self._keyCode = item
 					self:_updateDisplay()
-					return
+					return true
 				end
 			end
 		end
+		return false, "expected a KeyCode, MouseButton input, key name, or nil"
 	end
 
 	function Keybind:GetValue()
@@ -1222,10 +1279,16 @@ return (function()
 	end
 
 	function Keybind:SetMode(mode)
+		local isDestroyed, result, err = destroyedResult(self)
+		if isDestroyed then return result, err end
+		if mode ~= "Toggle" and mode ~= "Hold" then return false, "expected Toggle or Hold" end
 		self.Mode = mode
+		return true
 	end
 
 	function Keybind:Destroy()
+		if self._destroyed then return end
+		cleanupController(self)
 		if self._menu then
 			self._menu:_unregisterKeybind(self)
 			if self._menu._capturingKeybind == self then
@@ -1389,9 +1452,16 @@ return (function()
 	end
 
 	function TextInput:SetValue(value, noCallback)
+		local isDestroyed, result, err = destroyedResult(self)
+		if isDestroyed then return result, err end
 		if self.Numeric then
-			local num = tonumber(value)
-			if num ~= nil then
+			if value == nil or value == "" then
+				self._lastValidValue = nil
+				self._value = ""
+				if self.TextBox then self.TextBox.Text = self._value end
+			else
+				local num = tonumber(value)
+				if num == nil or not isFiniteNumber(num) then return false, "expected finite number" end
 				self._lastValidValue = num
 				self._value = tostring(num)
 				if self.TextBox then self.TextBox.Text = self._value end
@@ -1403,6 +1473,7 @@ return (function()
 		if not noCallback then
 			task.spawn(function() self.Callback(self._value, false) end)
 		end
+		return true
 	end
 
 	function TextInput:GetValue()
@@ -1412,13 +1483,19 @@ return (function()
 		return self._value
 	end
 
+	function TextInput:IsEmpty()
+		return self._value == ""
+	end
+
 	function TextInput:Focus()
-		if self.TextBox then
+		if not self._destroyed and self.TextBox then
 			self.TextBox:CaptureFocus()
 		end
 	end
 
 	function TextInput:Destroy()
+		if self._destroyed then return end
+		cleanupController(self)
 		if self.Container then self.Container:Destroy() end
 	end
 
@@ -1558,6 +1635,7 @@ return (function()
 	end
 
 	function Tab:Toggle(options)
+		options = options or {}
 		local toggle = Toggle.new(self.Container, options, self.Theme)
 		table.insert(self.Components, toggle)
 		if toggle.Flag then self.Menu:_trackFlagged(toggle) end
@@ -1841,6 +1919,7 @@ return (function()
 	end
 
 	function Tab:Slider(options)
+		options = options or {}
 		local slider = Slider.new(self.Container, options, self.Theme)
 		table.insert(self.Components, slider)
 		if slider.Flag then self.Menu:_trackFlagged(slider) end
@@ -1851,6 +1930,7 @@ return (function()
 	end
 
 	function Tab:Dropdown(options)
+		options = options or {}
 		local dd = Dropdown.new(self.Container, options, self.Theme, self.Menu)
 		table.insert(self.Components, dd)
 		if dd.Flag then self.Menu:_trackFlagged(dd) end
@@ -1861,6 +1941,7 @@ return (function()
 	end
 
 	function Tab:Keybind(options)
+		options = options or {}
 		local kb = Keybind.new(self.Container, options, self.Theme, self.Menu)
 		table.insert(self.Components, kb)
 		if kb.Flag then self.Menu:_trackFlagged(kb) end
@@ -1871,6 +1952,7 @@ return (function()
 	end
 
 	function Tab:Input(options)
+		options = options or {}
 		local ti = TextInput.new(self.Container, options, self.Theme)
 		table.insert(self.Components, ti)
 		if ti.Flag then self.Menu:_trackFlagged(ti) end
@@ -1886,6 +1968,7 @@ return (function()
 
 	function Checkbox.new(parent, options, theme)
 		local self = setmetatable({}, Checkbox)
+		self._setValueNoCallbackPosition = 3
 		self.Text = options.Text or "Checkbox"
 		self.Value = options.Default or false
 		self.Callback = options.Callback or function() end
@@ -1974,8 +2057,11 @@ return (function()
 		return self
 	end
 
-	function Checkbox:SetValue(v, instant)
-		if self.Value == v then return end
+	function Checkbox:SetValue(v, instant, noCallback)
+		local isDestroyed, result, err = destroyedResult(self)
+		if isDestroyed then return result, err end
+		if type(v) ~= "boolean" then return false, "expected boolean" end
+		if self.Value == v then return true end
 		self.Value = v
 		local ts = game:GetService("TweenService")
 		local ti = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -1988,16 +2074,22 @@ return (function()
 				if v then
 					self.Check.Text = ""
 					task.wait(0.05)
+					if self._destroyed or not self.Check or not self.Check.Parent then return end
 					self.Check.Text = "✓"
 				else
 					self.Check.Text = ""
 				end
 			end)
 		end
-		task.spawn(function() self.Callback(v) end)
+		if not noCallback then task.spawn(function() self.Callback(v) end) end
+		return true
 	end
 	function Checkbox:GetValue() return self.Value end
-	function Checkbox:Destroy() if self.Container then self.Container:Destroy() end end
+	function Checkbox:Destroy()
+		if self._destroyed then return end
+		cleanupController(self)
+		if self.Container then self.Container:Destroy() end
+	end
 
 	function Checkbox:ApplyTheme(theme)
 		self.Theme = theme
@@ -2125,16 +2217,19 @@ return (function()
 	end
 
 	function Collapsible:SetOpen(v)
-		if self._isOpen == v then return end
+		if self._destroyed then return false, "destroyed" end
+		if type(v) ~= "boolean" then return false, "expected boolean" end
+		if self._isOpen == v then return true end
 		self._isOpen = v
 		self.Arrow.Text = v and "▼" or "▶"
 		if self._tween then self._tween:Cancel() end
-		if not self.Container then return end
+		if not self.Container then return false, "missing container" end
 		local ts = game:GetService("TweenService")
 		local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		local contentH = self._layout and self._layout.AbsoluteContentSize.Y or 0
 		local targetH = v and (34 + contentH) or 34
 		self._tween = ts:Create(self.Container, ti, { Size = UDim2.new(1, -12, 0, targetH) }):Play()
+		return true
 	end
 
 	function Collapsible:ToggleOpen()
@@ -2253,6 +2348,8 @@ return (function()
 	end
 	function Collapsible:Divider() local div = {}; div.Container = U.Create("Frame", { Name = "Divider", Size = UDim2.new(1, -20, 0, 1), Position = UDim2.fromOffset(10, 0), BackgroundColor3 = self.Theme.Border, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = self.Content }); div.ApplyTheme = function(t) if div.Container then div.Container.BackgroundColor3 = t.Border end end; table.insert(self.Components, div); self:_updateSize(); return div end
 	function Collapsible:Destroy()
+		if self._destroyed then return end
+		self._destroyed = true
 		self._closed = true
 		if self._tween then self._tween:Cancel() end
 		for _, c in ipairs(self.Components) do if c.Destroy then c:Destroy() end end
@@ -2280,6 +2377,7 @@ return (function()
 
 	--[[ Tab methods ]]
 	function Tab:Checkbox(options)
+		options = options or {}
 		local c = Checkbox.new(self.Container, options, self.Theme)
 		table.insert(self.Components, c)
 		if c.Flag then self.Menu:_trackFlagged(c) end
@@ -2295,6 +2393,29 @@ return (function()
 		return c
 	end
 	function Tab:Destroy()
+		if self._destroyed then return end
+		self._destroyed = true
+		if self.Menu and not self.Menu._destroyed then
+			local removedIndex
+			for i, tab in ipairs(self.Menu.Tabs) do
+				if tab == self then
+					removedIndex = i
+					table.remove(self.Menu.Tabs, i)
+					break
+				end
+			end
+			if self.Menu.ActiveTab == self then
+				local replacement = removedIndex and self.Menu.Tabs[math.min(removedIndex, #self.Menu.Tabs)] or nil
+				if replacement then
+					self.Menu:SelectTab(replacement)
+				else
+					self.Menu.ActiveTab = nil
+					if self.Menu.ActiveBar then self.Menu.ActiveBar.BackgroundTransparency = 1 end
+				end
+			elseif self.Menu.ActiveTab and self.Menu.ActiveBar then
+				self.Menu:_positionActiveBar(self.Menu.ActiveTab, false)
+			end
+		end
 		for _, c in ipairs(self.Components) do
 			if c.Destroy then c:Destroy() end
 		end
@@ -2357,13 +2478,21 @@ return (function()
 		self._paletteFilteredResults = {}
 		self._paletteResultButtons = {}
 		self._paletteSelectedIndex = 0
+		local paletteMaxResults = options.PaletteMaxResults == nil and 60 or options.PaletteMaxResults
+		assert(isFiniteNumber(paletteMaxResults) and paletteMaxResults >= 1, "FyyUI Menu: PaletteMaxResults must be a positive number")
+		self._paletteMaxResults = math.floor(paletteMaxResults)
 		self._paletteConns = {}
 		self.ActiveTab = nil
 		self.Visible = options.Visible ~= false
 		self.MinSize = options.MinSize or Vector2.new(320, 300)
 		self.MaxSize = options.MaxSize or Vector2.new(850, 560)
+		assert(typeof(self.MinSize) == "Vector2" and typeof(self.MaxSize) == "Vector2", "FyyUI Menu: MinSize and MaxSize must be Vector2 values")
+		assert(isFiniteNumber(self.MinSize.X) and isFiniteNumber(self.MinSize.Y) and self.MinSize.X > 0 and self.MinSize.Y > 0, "FyyUI Menu: MinSize must be positive")
+		assert(isFiniteNumber(self.MaxSize.X) and isFiniteNumber(self.MaxSize.Y) and self.MaxSize.X >= self.MinSize.X and self.MaxSize.Y >= self.MinSize.Y, "FyyUI Menu: MaxSize must be at least MinSize")
 		self.Resizable = options.Resizable or false
-		self.Scale = options.Scale or 1
+		local requestedScale = options.Scale == nil and 1 or options.Scale
+		assert(isFiniteNumber(requestedScale), "FyyUI Menu: Scale must be a finite number")
+		self.Scale = math.clamp(requestedScale, 0.75, 1.35)
 		self._reducedMotion = options.ReducedMotion or false
 
 		-- Tooltip state
@@ -2374,10 +2503,23 @@ return (function()
 		self._tooltipTween = nil
 		self._mousePos = Vector2.new(0, 0)
 
-		local size = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(592, 340)
+		local size
+		if options.Size then
+			assert(typeof(options.Size) == "UDim2", "FyyUI Menu: Size must be a UDim2")
+			local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
+			size = Vector2.new(
+				options.Size.X.Offset + options.Size.X.Scale * viewport.X,
+				options.Size.Y.Offset + options.Size.Y.Scale * viewport.Y
+			)
+		else
+			size = Vector2.new(592, 340)
+		end
+		size = Vector2.new(math.clamp(size.X, self.MinSize.X, self.MaxSize.X), math.clamp(size.Y, self.MinSize.Y, self.MaxSize.Y))
 		local pos = options.Position or UDim2.new(0.5, -size.X / 2, 0.5, -size.Y / 2)
 		self._initialSize = UDim2.fromOffset(size.X, size.Y)
 		self._initialPos = pos
+
+		self.GuiParent = options.Parent or game:GetService("CoreGui")
 
 		self.Gui = U.Create("ScreenGui", {
 			Name = options.Title or "FyyUI",
@@ -2583,7 +2725,7 @@ return (function()
 			Name = "TitleSep",
 			Size = UDim2.fromOffset(2, theme.TopbarHeight),
 			Position = UDim2.fromOffset(sepX, 0),
-			BackgroundColor3 = Color3.fromRGB(140, 80, 255),
+			BackgroundColor3 = theme.Accent,
 			BorderSizePixel = 0,
 			ZIndex = 1,
 			Parent = self.Topbar,
@@ -2634,7 +2776,7 @@ return (function()
 				return ("%02x%02x%02x"):format(c.R * 255, c.G * 255, c.B * 255)
 			end
 			self._heartbeatCon = game:GetService("RunService").Heartbeat:Connect(function()
-				if not self.StatusLabel then return end
+				if self._destroyed or not self.Visible or self.Minimized or not self.StatusLabel or not self.StatusLabel.Parent then return end
 				-- FPS counter
 				_frameCount = _frameCount + 1
 				local now = tick()
@@ -2673,7 +2815,7 @@ return (function()
 		})
 		self.Topbar.MouseEnter:Connect(function()
 			if self.AccentLine then
-				self.AccentLine.BackgroundColor3 = Color3.fromRGB(140, 80, 255)
+			self.AccentLine.BackgroundColor3 = theme.Accent
 			end
 		end)
 		self.Topbar.MouseLeave:Connect(function()
@@ -2716,6 +2858,13 @@ return (function()
 			end
 		end)
 
+		-- Track SidebarList scroll to keep ActiveBar aligned with active tab
+		self._sidebarScrollCon = self.SidebarList:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+			if self.ActiveTab and self.ActiveBar and self.SidebarList then
+				self:_positionActiveBar(self.ActiveTab, false)
+			end
+		end)
+
 		-- Shared ActiveBar — slides vertically between tabs (parented to Sidebar, NOT SidebarList, to avoid UIListLayout interference)
 		self.ActiveBar = U.Create("Frame", {
 			Name = "ActiveBar",
@@ -2748,7 +2897,7 @@ return (function()
 			Name = "SidebarLine",
 			Size = UDim2.new(0, 1, 1, -(theme.TopbarHeight + 10)),
 			Position = UDim2.new(0, sbw + 4, 0, theme.TopbarHeight + 6),
-			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundColor3 = theme.Border,
 			BackgroundTransparency = 0.5,
 			BorderSizePixel = 0,
 			ZIndex = 1,
@@ -2761,7 +2910,7 @@ return (function()
 			DisplayOrder = 200,
 			IgnoreGuiInset = true,
 			Enabled = self.Visible,
-			Parent = game:GetService("CoreGui"),
+			Parent = self.GuiParent,
 		})
 		self.NotifBox = U.Create("Frame", {
 			Name = "Notifications",
@@ -2792,14 +2941,14 @@ return (function()
 				Name = "MinIcon",
 				Size = UDim2.fromOffset(iconSize, iconSize),
 				Position = UDim2.new(0.5, -iconSize / 2, 0.5, -iconSize / 2),
-				BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+				BackgroundColor3 = theme.Element,
 				BackgroundTransparency = 0,
 				BorderSizePixel = 0,
 				AutoButtonColor = false,
 				Parent = self._minGui,
 			})
 			U.Create("UICorner", { CornerRadius = UDim.new(0, 12), Parent = self._minFrame })
-			U.Create("UIStroke", { Color = Color3.fromRGB(138, 43, 226), Thickness = 2, Parent = self._minFrame })
+			U.Create("UIStroke", { Color = theme.Accent, Thickness = 2, Parent = self._minFrame })
 			local minIcon = U.Create("ImageLabel", {
 				Name = "Icon",
 				Size = UDim2.new(1, -4, 1, -4),
@@ -2815,7 +2964,7 @@ return (function()
 			-- Dragging with click/drag distinction
 			local dragging, dragStart, startPos, didDrag
 			self._minFrame.InputBegan:Connect(function(i)
-				if i.UserInputType == Enum.UserInputType.MouseButton1 then
+				if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
 					dragging = true
 					didDrag = false
 					dragStart = i.Position
@@ -2823,7 +2972,7 @@ return (function()
 				end
 			end)
 			self._minFrame.InputEnded:Connect(function(i)
-				if i.UserInputType == Enum.UserInputType.MouseButton1 then
+				if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
 					dragging = false
 					if not didDrag then
 						self:_restore()
@@ -2853,19 +3002,45 @@ return (function()
 				Name = "RestoreBtn",
 				Size = UDim2.fromOffset(50, 50),
 				Position = UDim2.new(0.5, -25, 0.5, -25),
-				BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+				BackgroundColor3 = theme.Element,
 				BackgroundTransparency = 0,
 				Text = "☰",
 				Font = Enum.Font.GothamBold,
 				TextSize = 24,
-				TextColor3 = Color3.fromRGB(200, 200, 200),
+				TextColor3 = theme.TextPrimary,
 				AutoButtonColor = false,
 				Parent = self._noLogoRestoreGui,
 			})
 			U.Create("UICorner", { CornerRadius = UDim.new(0, 12), Parent = self._noLogoRestoreBtn })
-			U.Create("UIStroke", { Color = Color3.fromRGB(138, 43, 226), Thickness = 2, Parent = self._noLogoRestoreBtn })
-			self._noLogoRestoreBtn.MouseButton1Click:Connect(function()
-				self:_restore()
+			U.Create("UIStroke", { Color = theme.Accent, Thickness = 2, Parent = self._noLogoRestoreBtn })
+			-- No-logo drag parity: allow repositioning the restore button
+			local nlDragging, nlDragStart, nlStartPos, nlDidDrag
+			self._noLogoRestoreBtn.InputBegan:Connect(function(i)
+				if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+					nlDragging = true
+					nlDidDrag = false
+					nlDragStart = i.Position
+					nlStartPos = self._noLogoRestoreBtn.Position
+				end
+			end)
+			self._noLogoRestoreBtn.InputEnded:Connect(function(i)
+				if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+					nlDragging = false
+					if not nlDidDrag then
+						self:_restore()
+					end
+				end
+			end)
+			self._noLogoDragCon = game:GetService("UserInputService").InputChanged:Connect(function(i)
+				if nlDragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+					local delta = i.Position - nlDragStart
+					if delta.Magnitude > 5 then nlDidDrag = true end
+					self._noLogoRestoreBtn.Position = UDim2.new(
+						nlStartPos.X.Scale, nlStartPos.X.Offset + delta.X,
+						nlStartPos.Y.Scale, nlStartPos.Y.Offset + delta.Y
+					)
+					self._noLogoSavedPos = self._noLogoRestoreBtn.Position
+				end
 			end)
 		end
 
@@ -2892,7 +3067,7 @@ return (function()
 
 		self:_dragging()
 
-		self.Gui.Parent = options.Parent or game:GetService("CoreGui")
+		self.Gui.Parent = self.GuiParent
 
 		if self.Resizable then
 			self:_resizable()
@@ -2903,7 +3078,7 @@ return (function()
 			local uis = game:GetService("UserInputService")
 			self._keybindInputCon = uis.InputBegan:Connect(function(input, gpe)
 				-- Ctrl+K: toggle command palette (before capture/gpe checks)
-				if not self._capturingKeybind
+				if self.Visible and not self.Minimized and not self._capturingKeybind
 					and input.UserInputType == Enum.UserInputType.Keyboard
 					and input.KeyCode == Enum.KeyCode.K
 					and (uis:IsKeyDown(Enum.KeyCode.LeftControl) or uis:IsKeyDown(Enum.KeyCode.RightControl)) then
@@ -2991,6 +3166,38 @@ return (function()
 		return self
 	end
 
+	function Menu:_positionActiveBar(tab, animate)
+		if not tab or not self.ActiveBar then return end
+		local tabIdx = 0
+		for i, candidate in ipairs(self.Tabs) do
+			if candidate == tab then tabIdx = i; break end
+		end
+		if tabIdx == 0 then return end
+
+		if self._activeBarTween then
+			self._activeBarTween:Cancel()
+			self._activeBarTween = nil
+		end
+
+		local scrollY = self.SidebarList and self.SidebarList.CanvasPosition.Y or 0
+		local position = UDim2.fromOffset(5, (tabIdx - 1) * 40 + 9 - scrollY)
+		self.ActiveBar.BackgroundTransparency = 0
+		if animate then
+			local tween = game:GetService("TweenService"):Create(
+				self.ActiveBar,
+				TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ Position = position }
+			)
+			self._activeBarTween = tween
+			tween.Completed:Connect(function()
+				if self._activeBarTween == tween then self._activeBarTween = nil end
+			end)
+			tween:Play()
+		else
+			self.ActiveBar.Position = position
+		end
+	end
+
 	function Menu:SelectTab(tab)
 		if self.ActiveTab == tab then return end
 		self:HideDropdownPopup()
@@ -3017,20 +3224,7 @@ return (function()
 			tab.Container.Visible = true
 			ts:Create(tab.Container, ti, { Position = UDim2.fromOffset(6, 3) }):Play()
 
-			-- Shared ActiveBar slides to this tab's position (calculated from index, not layout)
-			if self.ActiveBar then
-				local tabIdx = 0
-				for i, t in ipairs(self.Tabs) do
-					if t == tab then tabIdx = i; break end
-				end
-				local targetY = (tabIdx - 1) * 40 + 9 -- (38 height + 2 padding) + bar center offset (38-20)/2
-				self.ActiveBar.BackgroundTransparency = 0
-				if hadPrevTab then
-					ts:Create(self.ActiveBar, ti, { Position = UDim2.fromOffset(5, targetY) }):Play()
-				else
-					self.ActiveBar.Position = UDim2.fromOffset(5, targetY)
-				end
-			end
+			self:_positionActiveBar(tab, hadPrevTab)
 
 			-- Tab button visual
 			tab.TabButton.BackgroundTransparency = 0
@@ -3273,15 +3467,23 @@ return (function()
 	end
 
 	function Menu:Tab(options)
+		options = options or {}
 		return Tab.new(self, options)
 	end
 
 	function Menu:_trackFlagged(ctrl)
 		if ctrl.Flag then
+			ctrl._menu = self
 			if self._flagRegistry[ctrl.Flag] ~= nil then
 				warn(("[FyyUI] Duplicate Flag '%s' — overwriting previous controller"):format(ctrl.Flag))
 			end
 			self._flagRegistry[ctrl.Flag] = ctrl
+		end
+	end
+
+	function Menu:_untrackFlagged(ctrl)
+		if ctrl and ctrl.Flag and self._flagRegistry[ctrl.Flag] == ctrl then
+			self._flagRegistry[ctrl.Flag] = nil
 		end
 	end
 
@@ -3298,7 +3500,7 @@ return (function()
 	function Menu:ExportConfig()
 		local snapshot = {
 			Schema = "FyyUI.Config.v1",
-			Version = "0.10.7",
+			Version = "0.10.8",
 			Values = {},
 		}
 		for flag, ctrl in pairs(self._flagRegistry) do
@@ -3315,10 +3517,11 @@ return (function()
 			return false, "Invalid config: missing Values table"
 		end
 		local noCallbacks = options and options.NoCallbacks == true
+		local details = { Applied = {}, Failed = {}, Unknown = {} }
 		for flag, value in pairs(snapshot.Values) do
 			local ctrl = self._flagRegistry[flag]
 			if ctrl then
-				local ok, err = pcall(function()
+				local ok, applied, err = pcall(function()
 					if ctrl.Multi then
 						-- Multi-select dropdown: toggle via public SetValue API
 						local targetSet = {}
@@ -3331,22 +3534,42 @@ return (function()
 							local isSelected = ctrl._selected[opt] == true
 							local shouldSelect = targetSet[opt] == true
 							if isSelected ~= shouldSelect then
-								ctrl:SetValue(opt)
+								local changed, changeErr = ctrl:SetValue(opt, noCallbacks)
+								if changed == false then return false, changeErr end
 							end
 						end
+						return true
 					else
-						ctrl:SetValue(value, noCallbacks)
+						if ctrl._setValueNoCallbackPosition == 3 then
+							return ctrl:SetValue(value, false, noCallbacks)
+						else
+							return ctrl:SetValue(value, noCallbacks)
+						end
 					end
 				end)
+				if ok and applied ~= false then
+					table.insert(details.Applied, flag)
+				elseif ok then
+					table.insert(details.Failed, { Flag = flag, Error = tostring(err or "setter rejected value") })
+				else
+					table.insert(details.Failed, { Flag = flag, Error = tostring(applied) })
+				end
+			else
+				table.insert(details.Unknown, flag)
 			end
 		end
-		return true
+		if #details.Failed > 0 then
+			return false, details
+		end
+		return true, details
 	end
 
 	function Menu:Notify(options)
+		if self._destroyed or not self.NotifBox then return nil, "destroyed" end
 		options = options or {}
-		local text = options.Text or ""
-		local duration = options.Duration or 3
+		local text = tostring(options.Text or "")
+		local duration = options.Duration == nil and 3 or options.Duration
+		assert(isFiniteNumber(duration) and duration >= 0, "FyyUI Notify: Duration must be a non-negative finite number")
 		local notifType = options.Type or "Info"
 		local theme = self.Theme
 
@@ -3376,7 +3599,7 @@ return (function()
 			Parent = frame,
 		})
 
-		U.Create("TextLabel", {
+		local label = U.Create("TextLabel", {
 			Name = "Text",
 			Size = UDim2.new(1, -14, 1, 0),
 			Position = UDim2.fromOffset(12, 0),
@@ -3386,29 +3609,51 @@ return (function()
 			TextSize = theme.FontSize,
 			TextColor3 = theme.TextPrimary,
 			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Center,
+			TextWrapped = true,
 			Parent = frame,
 		})
 
 		-- Animate in
-		local h = 32
+		local textSize = game:GetService("TextService"):GetTextSize(tostring(text), theme.FontSize, theme.Font, Vector2.new(292, 1000))
+		local h = math.max(32, textSize.Y + 14)
 		frame.Size = UDim2.new(1, 0, 0, 0)
 		local ts = game:GetService("TweenService")
-		local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-		local fadeIn = ts:Create(frame, ti, { Size = UDim2.new(1, 0, 0, h) })
-		fadeIn:Play()
-
-		-- Auto dismiss
-		task.delay(duration, function()
-			if self._destroyed or not frame.Parent then return end
+		local dismissed = false
+		local function dismiss()
+			if dismissed or not frame.Parent then return false end
+			dismissed = true
 			local fadeOut = ts:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 				Size = UDim2.new(1, 0, 0, 0),
 				BackgroundTransparency = 1,
 			})
 			fadeOut.Completed:Connect(function()
-				frame:Destroy()
+				if frame then frame:Destroy() end
 			end)
 			fadeOut:Play()
+			return true
+		end
+		local fadeIn
+		local handle = {}
+		function handle:Dismiss() return dismiss() end
+		function handle:Update(nextText)
+			if dismissed or not frame.Parent then return false, "dismissed" end
+			if fadeIn then fadeIn:Cancel(); fadeIn = nil end
+			label.Text = tostring(nextText or "")
+			local nextSize = game:GetService("TextService"):GetTextSize(label.Text, theme.FontSize, theme.Font, Vector2.new(292, 1000))
+			frame.Size = UDim2.new(1, 0, 0, math.max(32, nextSize.Y + 14))
+			return true
+		end
+		local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		fadeIn = ts:Create(frame, ti, { Size = UDim2.new(1, 0, 0, h) })
+		fadeIn:Play()
+
+		-- Auto dismiss
+		task.delay(duration, function()
+			if self._destroyed or not frame.Parent then return end
+			dismiss()
 		end)
+		return handle
 	end
 
 	function Menu:_dragging()
@@ -3417,6 +3662,7 @@ return (function()
 		local shadow = self._shadow
 		local dragging, ds, sp
 		local uis = game:GetService("UserInputService")
+		local CLAMP_MARGIN = 40
 
 		topbar.InputBegan:Connect(function(input)
 			local t = input.UserInputType
@@ -3430,14 +3676,21 @@ return (function()
 			if gpe then return end
 			if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
 				local delta = input.Position - ds
+				-- Clamp so at least CLAMP_MARGIN px of the frame stays visible in the viewport
+				local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
+				local fs = frame.AbsoluteSize
+				local rawX = sp.X.Scale * viewport.X + sp.X.Offset + delta.X
+				local rawY = sp.Y.Scale * viewport.Y + sp.Y.Offset + delta.Y
+				local clampedX = math.clamp(rawX, -fs.X + CLAMP_MARGIN, viewport.X - CLAMP_MARGIN)
+				local clampedY = math.clamp(rawY, -fs.Y + CLAMP_MARGIN, viewport.Y - CLAMP_MARGIN)
 				frame.Position = UDim2.new(
-					sp.X.Scale, sp.X.Offset + delta.X,
-					sp.Y.Scale, sp.Y.Offset + delta.Y
+					sp.X.Scale, clampedX - sp.X.Scale * viewport.X,
+					sp.Y.Scale, clampedY - sp.Y.Scale * viewport.Y
 				)
 				if shadow then
 					shadow.Position = UDim2.new(
-						sp.X.Scale, sp.X.Offset + delta.X - 8,
-						sp.Y.Scale, sp.Y.Offset + delta.Y - 8
+						sp.X.Scale, clampedX - sp.X.Scale * viewport.X - 8,
+						sp.Y.Scale, clampedY - sp.Y.Scale * viewport.Y - 8
 					)
 				end
 			end
@@ -3450,15 +3703,31 @@ return (function()
 		end)
 	end
 
+	function Menu:_closeTransientUi()
+		self:HideDropdownPopup()
+		self:CloseCommandPalette()
+		self._tooltipPending = false
+		self._tooltipTarget = nil
+		self:_hideTooltip()
+		if self._confirmPopup then
+			local confirm = self._confirmPopup
+			self._confirmPopup = nil
+			for _, instance in pairs(confirm) do
+				pcall(function() instance:Destroy() end)
+			end
+		end
+	end
+
 	function Menu:_minimize()
 		if self._destroyed then return end
+		self:_closeTransientUi()
 		self.Minimized = true
 		self._minPrevSize = self.Frame.Size
 		self._minPrevPos = self.Frame.Position
 
 		local ts = game:GetService("TweenService")
 		local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut)
-		local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or UDim2.new(0,12,0.5,-25)
+		local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or (self._noLogoSavedPos or UDim2.new(0.5,-25,0.5,-25))
 
 		ts:Create(self.Frame, ti, {
 			Size = UDim2.fromOffset(60, 60),
@@ -3471,11 +3740,11 @@ return (function()
 			if self._destroyed or self._minimizeToken ~= minimizeToken or not self.Minimized or not self.Visible then return end
 			if self._minGui then
 				self._minGui.Enabled = true
-				self._minGui.Parent = game:GetService("CoreGui")
+				self._minGui.Parent = self.GuiParent
 				self.Gui.Enabled = false
 			elseif self._noLogoRestoreGui then
 				self._noLogoRestoreGui.Enabled = true
-				self._noLogoRestoreGui.Parent = game:GetService("CoreGui")
+				self._noLogoRestoreGui.Parent = self.GuiParent
 				self.Gui.Enabled = false
 			end
 		end)
@@ -3488,7 +3757,7 @@ return (function()
 
 		local ts = game:GetService("TweenService")
 		local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut)
-		local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or UDim2.new(0,12,0.5,-25)
+		local iconPos = self._minFrame and (self._minSavedPos or self._minFrame.Position) or (self._noLogoSavedPos or UDim2.new(0.5,-25,0.5,-25))
 
 		self.Frame.Size = UDim2.fromOffset(60, 60)
 		self.Frame.Position = iconPos
@@ -3598,18 +3867,20 @@ return (function()
 	end
 
 	function Menu:SetVisible(v)
+		if self._destroyed then return false, "destroyed" end
+		if type(v) ~= "boolean" then return false, "expected boolean" end
 		self.Visible = v
-		if not self.Gui then return end
+		if not self.Gui then return false, "missing gui" end
 		if v then
 			-- Restore visibility without accidentally unminimizing
 			if self.Minimized then
 				self.Gui.Enabled = false
 				if self._minGui then
 					self._minGui.Enabled = true
-					self._minGui.Parent = game:GetService("CoreGui")
+					self._minGui.Parent = self.GuiParent
 				elseif self._noLogoRestoreGui then
 					self._noLogoRestoreGui.Enabled = true
-					self._noLogoRestoreGui.Parent = game:GetService("CoreGui")
+					self._noLogoRestoreGui.Parent = self.GuiParent
 				end
 			else
 				self.Gui.Enabled = true
@@ -3619,17 +3890,23 @@ return (function()
 			end
 		else
 			-- Deliberately hidden: close dropdown, suppress restore/notif GUIs
-			self:HideDropdownPopup()
+			self:_closeTransientUi()
 			if self._minGui then self._minGui.Enabled = false end
 			if self._noLogoRestoreGui then self._noLogoRestoreGui.Enabled = false end
 			if self._notifGui then self._notifGui.Enabled = false end
 			self.Gui.Enabled = false
 		end
+		return true
 	end
 
-	function Menu:ToggleVisibility() self:SetVisible(not self.Visible) end
+	function Menu:ToggleVisibility() return self:SetVisible(not self.Visible) end
 	function Menu:GetVisible() return self.Visible end
-	function Menu:SetTitle(t) self.Title.Text = t end
+	function Menu:SetTitle(t)
+		if self._destroyed or not self.Title then return false, "destroyed" end
+		if type(t) ~= "string" then return false, "expected string" end
+		self.Title.Text = t
+		return true
+	end
 
 	function Menu:_confirmClose()
 		if self._confirmPopup then return end
@@ -3763,20 +4040,23 @@ return (function()
 
 	function Menu:Destroy()
 		if self._destroyed then return end
+		self:_closeTransientUi()
 		self._destroyed = true
 		self._minimizeToken = (self._minimizeToken or 0) + 1
-		self:CloseCommandPalette()
 
 		-- Disconnect all service-level connections
 		if self._heartbeatCon then self._heartbeatCon:Disconnect(); self._heartbeatCon = nil end
 		if self._popupUISCon then self._popupUISCon:Disconnect(); self._popupUISCon = nil end
 		if self._dragInputCon then self._dragInputCon:Disconnect(); self._dragInputCon = nil end
 		if self._minDragInputCon then self._minDragInputCon:Disconnect(); self._minDragInputCon = nil end
+		if self._noLogoDragCon then self._noLogoDragCon:Disconnect(); self._noLogoDragCon = nil end
+		if self._sidebarScrollCon then self._sidebarScrollCon:Disconnect(); self._sidebarScrollCon = nil end
 		if self._resizeInputCon then self._resizeInputCon:Disconnect(); self._resizeInputCon = nil end
 		if self._resizeEndCon then self._resizeEndCon:Disconnect(); self._resizeEndCon = nil end
 		if self._keybindInputCon then self._keybindInputCon:Disconnect(); self._keybindInputCon = nil end
 		if self._keybindEndCon then self._keybindEndCon:Disconnect(); self._keybindEndCon = nil end
 		if self._scaleTween then self._scaleTween:Cancel(); self._scaleTween = nil end
+		if self._activeBarTween then self._activeBarTween:Cancel(); self._activeBarTween = nil end
 
 		-- Destroy external ScreenGuis owned by this menu
 		if self._notifGui then self._notifGui:Destroy(); self._notifGui = nil end
@@ -3875,8 +4155,18 @@ return (function()
 
 		-- No-logo restore button (minimize affordance)
 		if self._noLogoRestoreBtn then
-			self._noLogoRestoreBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20) -- keep dark
+			self._noLogoRestoreBtn.BackgroundColor3 = theme.Element
+			self._noLogoRestoreBtn.TextColor3 = theme.TextPrimary
+			local restoreStroke = self._noLogoRestoreBtn:FindFirstChildOfClass("UIStroke")
+			if restoreStroke then restoreStroke.Color = theme.Accent end
 		end
+		if self._minFrame then
+			self._minFrame.BackgroundColor3 = theme.Element
+			local minStroke = self._minFrame:FindFirstChildOfClass("UIStroke")
+			if minStroke then minStroke.Color = theme.Accent end
+		end
+		if self.TitleSep then self.TitleSep.BackgroundColor3 = theme.Accent end
+		if self.SidebarLine then self.SidebarLine.BackgroundColor3 = theme.Border end
 
 		-- Confirm-close popup (if open)
 		if self._confirmPopup then
@@ -3957,10 +4247,7 @@ return (function()
 			end
 			self.Theme = builtin
 		elseif type(themeOrName) == "table" then
-			if not themeOrName.Background or not themeOrName.TextPrimary then
-				return false, "Theme table must have at least Background and TextPrimary colors"
-			end
-			self.Theme = themeOrName
+			self.Theme = Theme:Override(Theme.Dark, themeOrName)
 		else
 			return false, "Expected a theme name (string) or theme table"
 		end
@@ -3969,9 +4256,11 @@ return (function()
 	end
 
 	function Menu:SetScale(value)
+		if self._destroyed then return false, "destroyed" end
+		if not isFiniteNumber(value) then return false, "expected finite number" end
 		value = math.clamp(value, 0.75, 1.35)
 		self.Scale = value
-		if not self._uiScale then return end
+		if not self._uiScale then return true end
 		if self._reducedMotion then
 			self._uiScale.Scale = value
 		else
@@ -3983,6 +4272,7 @@ return (function()
 			)
 			self._scaleTween:Play()
 		end
+		return true
 	end
 
 	function Menu:GetScale()
@@ -4126,19 +4416,24 @@ return (function()
 	function Menu:_buildPaletteIndex()
 		self._paletteIndex = {}
 		for _, tab in ipairs(self.Tabs) do
-			table.insert(self._paletteIndex, {
-				type = "tab",
-				text = tab.Text,
-				tab = tab,
-				collapsible = nil,
-				ref = nil,
-			})
-			self:_indexTabComponents(tab.Components, tab, nil)
+			if not tab._destroyed then
+				table.insert(self._paletteIndex, {
+					type = "tab",
+					text = tab.Text,
+					tab = tab,
+					collapsible = nil,
+					ref = nil,
+				})
+				self:_indexTabComponents(tab.Components, tab, nil)
+			end
 		end
 	end
 
 	function Menu:_indexTabComponents(components, tab, collapsible)
 		for _, comp in ipairs(components) do
+			if type(comp) == "table" and comp._destroyed then
+				continue
+			end
 			-- Collapsible detection (has _closed field)
 			if type(comp) == "table" and comp._closed ~= nil then
 				if comp.Title then
@@ -4189,7 +4484,7 @@ return (function()
 		local q = query:lower()
 		local filtered = {}
 		for _, item in ipairs(self._paletteIndex) do
-			if #q == 0 or item.text:lower():find(q, 1, true) then
+			if (#q == 0 or item.text:lower():find(q, 1, true)) and #filtered < self._paletteMaxResults then
 				table.insert(filtered, item)
 			end
 		end
@@ -4361,8 +4656,8 @@ return (function()
 	end
 
 	function Menu:OpenCommandPalette()
+		if self._destroyed or not self.Visible or self.Minimized then return false, "not visible" end
 		if self._paletteOpen then self:CloseCommandPalette() end
-		if self._destroyed then return end
 		self:HideDropdownPopup()
 		self:_buildPaletteIndex()
 		self._paletteOpen = true
@@ -4507,6 +4802,7 @@ return (function()
 				self._paletteSearchBox:CaptureFocus()
 			end
 		end)
+		return true
 	end
 
 	function Menu:CloseCommandPalette()
@@ -4545,10 +4841,35 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.10.7", Theme = Theme }
+	local FyyUI = { Version = "0.10.8", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
+	end
+
+	-- Explicit compatibility escape hatch for callers who deliberately trust an
+	-- icon provider. This library never invokes it automatically.
+	function FyyUI.LoadRemoteIconModule(url)
+		url = url or DEFAULT_ICON_MODULE_URL
+		if type(url) ~= "string" or url == "" then return false, "expected a non-empty URL" end
+		if type(loadstring) ~= "function" then return false, "loadstring is unavailable" end
+		local raw
+		local fetchMethods = {
+			function() return game:HttpGet(url) end,
+			function() return game:GetService("HttpService"):GetAsync(url) end,
+		}
+		for _, fetch in ipairs(fetchMethods) do
+			local ok, result = pcall(fetch)
+			if ok and type(result) == "string" then raw = result; break end
+		end
+		if not raw then return false, "failed to download icon module" end
+		local compiled, compileErr = loadstring(raw)
+		if not compiled then return false, tostring(compileErr) end
+		local ran, moduleOrErr = pcall(compiled)
+		if not ran then return false, tostring(moduleOrErr) end
+		if type(moduleOrErr) ~= "table" then return false, "icon module must return a table" end
+		IconModule = moduleOrErr
+		return true, IconModule
 	end
 	function FyyUI.GetIconModule()
 		return IconModule
@@ -4559,6 +4880,7 @@ return (function()
 		local name = options.Theme or "Dark"
 		local theme = type(name) == "string" and Theme[name] or name
 		if not theme then theme = Theme.Dark end
+		if type(theme) == "table" then theme = Theme:Override(Theme.Dark, theme) end
 		if options.ColorOverride then theme = Theme:Override(theme, options.ColorOverride) end
 		return Menu.new(options, theme)
 	end

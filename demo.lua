@@ -63,14 +63,35 @@ autoTab:Button({ Text = "Stop All", Description = "Disable all automation", Colo
 local settingsTab = menu:Tab({ Text = "Settings", Icon = "settings" })
 
 local general = settingsTab:Collapsible("General", { DefaultOpen = true })
-general:Dropdown({ Text = "Theme", Options = { "Dark", "Light", "Amoled" }, Default = "Amoled", Callback = function(v) print("[Theme]", v) end })
+general:Dropdown({
+	Text = "Theme",
+	Options = { "Dark", "Light", "Amoled" },
+	Default = "Amoled",
+	Callback = function(v)
+		local ok, err = menu:SetTheme(v)
+		if not ok then warn("[FyyUI] Theme switch failed:", err) end
+	end,
+})
 general:Checkbox({ Text = "Show Watermark", Default = true })
 general:Checkbox({ Text = "Auto Update", Default = true })
-general:Slider({ Text = "UI Scale", Min = 0.5, Max = 1.5, Default = 1, Suffix = "x", Step = 0.1 })
+general:Slider({
+	Text = "UI Scale",
+	Min = 0.75,
+	Max = 1.35,
+	Default = 1,
+	Suffix = "x",
+	Step = 0.1,
+	Callback = function(v) menu:SetScale(v) end,
+})
 
 local keybinds = settingsTab:Collapsible("Keybinds")
-keybinds:Dropdown({ Text = "Toggle Menu", Options = { "RightShift", "LeftShift", "RightCtrl", "F1", "F2", "F3" }, Default = "RightShift" })
-keybinds:Dropdown({ Text = "Panic Key", Options = { "None", "F1", "F2", "F3", "Insert", "Delete" }, Default = "None" })
+keybinds:Keybind({
+	Text = "Toggle Menu",
+	Default = Enum.KeyCode.RightShift,
+	Mode = "Toggle",
+	Callback = function() menu:ToggleVisibility() end,
+})
+keybinds:Keybind({ Text = "Panic Key", Default = nil, Mode = "Toggle", Callback = function() end })
 keybinds:Checkbox({ Text = "Hold to Aim", Default = false })
 
 -- Tab 4: Info
