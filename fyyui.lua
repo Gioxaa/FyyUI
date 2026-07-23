@@ -1,5 +1,5 @@
 --[[
-	FyyUI v0.10.1
+	FyyUI v0.10.2
 	Roblox UI Library
 	@github FyyWannaFly/FyyUI
 	
@@ -740,6 +740,11 @@ return (function()
 			})
 		end
 
+		-- Tooltip from options
+		if options.Tooltip and menuRef then
+			menuRef:BindTooltip(self.Container, options.Tooltip)
+		end
+
 		return self
 	end
 
@@ -950,6 +955,11 @@ return (function()
 		-- Register with menu's keybind router
 		if menuRef then
 			menuRef:_registerKeybind(self)
+		end
+
+		-- Tooltip from options
+		if options.Tooltip and menuRef then
+			menuRef:BindTooltip(self.Container, options.Tooltip)
 		end
 
 		return self
@@ -1390,6 +1400,11 @@ return (function()
 			end
 		end)
 
+		-- Bind tooltip to TabButton if provided
+		if options.Tooltip and menu then
+			menu:BindTooltip(self.TabButton, options.Tooltip)
+		end
+
 		table.insert(menu.Tabs, self)
 		if #menu.Tabs == 1 then
 			menu:SelectTab(self)
@@ -1402,6 +1417,9 @@ return (function()
 		local toggle = Toggle.new(self.Container, options, self.Theme)
 		table.insert(self.Components, toggle)
 		if toggle.Flag then self.Menu:_trackFlagged(toggle) end
+		if options.Tooltip and self.Menu then
+			self.Menu:BindTooltip(toggle.Container, options.Tooltip)
+		end
 		return toggle
 	end
 
@@ -1524,6 +1542,9 @@ return (function()
 			if desc then desc.Font = t.Font; desc.TextSize = t.FontSizeSmall; desc.TextColor3 = t.TextMuted end
 		end
 
+		if options.Tooltip and self.Menu then
+			self.Menu:BindTooltip(btn.Container, options.Tooltip)
+		end
 		table.insert(self.Components, btn)
 		return btn
 	end
@@ -1679,6 +1700,9 @@ return (function()
 		local slider = Slider.new(self.Container, options, self.Theme)
 		table.insert(self.Components, slider)
 		if slider.Flag then self.Menu:_trackFlagged(slider) end
+		if options.Tooltip and self.Menu then
+			self.Menu:BindTooltip(slider.Container, options.Tooltip)
+		end
 		return slider
 	end
 
@@ -1686,6 +1710,9 @@ return (function()
 		local dd = Dropdown.new(self.Container, options, self.Theme, self.Menu)
 		table.insert(self.Components, dd)
 		if dd.Flag then self.Menu:_trackFlagged(dd) end
+		if options.Tooltip and self.Menu then
+			self.Menu:BindTooltip(dd.Container, options.Tooltip)
+		end
 		return dd
 	end
 
@@ -1693,6 +1720,9 @@ return (function()
 		local kb = Keybind.new(self.Container, options, self.Theme, self.Menu)
 		table.insert(self.Components, kb)
 		if kb.Flag then self.Menu:_trackFlagged(kb) end
+		if options.Tooltip and self.Menu then
+			self.Menu:BindTooltip(kb.Container, options.Tooltip)
+		end
 		return kb
 	end
 
@@ -1700,6 +1730,9 @@ return (function()
 		local ti = TextInput.new(self.Container, options, self.Theme)
 		table.insert(self.Components, ti)
 		if ti.Flag then self.Menu:_trackFlagged(ti) end
+		if options.Tooltip and self.Menu then
+			self.Menu:BindTooltip(ti.Container, options.Tooltip)
+		end
 		return ti
 	end
 
@@ -1984,13 +2017,13 @@ return (function()
 		end
 	end
 
-	-- Pass-through methods (all default opts to {})
-	function Collapsible:Toggle(opts) opts = opts or {}; local c = Toggle.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; self:_updateSize(); return c end
-	function Collapsible:Checkbox(opts) opts = opts or {}; local c = Checkbox.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; self:_updateSize(); return c end
-	function Collapsible:Slider(opts) opts = opts or {}; local c = Slider.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; self:_updateSize(); return c end
-	function Collapsible:Dropdown(opts) opts = opts or {}; local c = Dropdown.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; self:_updateSize(); return c end
-	function Collapsible:Keybind(opts) opts = opts or {}; local c = Keybind.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; self:_updateSize(); return c end
-	function Collapsible:Input(opts) opts = opts or {}; local c = TextInput.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; self:_updateSize(); return c end
+	-- Pass-through methods (all default opts to {}; Tooltip auto-bound via self._menu)
+	function Collapsible:Toggle(opts) opts = opts or {}; local c = Toggle.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
+	function Collapsible:Checkbox(opts) opts = opts or {}; local c = Checkbox.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
+	function Collapsible:Slider(opts) opts = opts or {}; local c = Slider.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
+	function Collapsible:Dropdown(opts) opts = opts or {}; local c = Dropdown.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
+	function Collapsible:Keybind(opts) opts = opts or {}; local c = Keybind.new(self.Content, opts, self.Theme, self._menu or nil); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
+	function Collapsible:Input(opts) opts = opts or {}; local c = TextInput.new(self.Content, opts, self.Theme); table.insert(self.Components, c); if c.Flag and self._menu then self._menu:_trackFlagged(c) end; if opts.Tooltip and self._menu then self._menu:BindTooltip(c.Container, opts.Tooltip) end; self:_updateSize(); return c end
 	function Collapsible:Button(opts)
 		opts = opts or {}
 		local theme = self.Theme
@@ -2027,6 +2060,7 @@ return (function()
 			local d = btn.Container:FindFirstChild("Description")
 			if d then d.Font = t.Font; d.TextSize = t.FontSizeSmall; d.TextColor3 = t.TextMuted end
 		end
+		if opts.Tooltip and self._menu then self._menu:BindTooltip(btn.Container, opts.Tooltip) end
 		table.insert(self.Components, btn); self:_updateSize(); return btn
 	end
 	function Collapsible:Label(opts)
@@ -2105,6 +2139,9 @@ return (function()
 		local c = Checkbox.new(self.Container, options, self.Theme)
 		table.insert(self.Components, c)
 		if c.Flag then self.Menu:_trackFlagged(c) end
+		if options.Tooltip and self.Menu then
+			self.Menu:BindTooltip(c.Container, options.Tooltip)
+		end
 		return c
 	end
 	function Tab:Collapsible(title, options)
@@ -2184,6 +2221,14 @@ return (function()
 		self.Resizable = options.Resizable or false
 		self.Scale = options.Scale or 1
 		self._reducedMotion = options.ReducedMotion or false
+
+		-- Tooltip state
+		self._tooltips = {}
+		self._tooltipActive = false
+		self._tooltipPending = false
+		self._tooltipTarget = nil
+		self._tooltipTween = nil
+		self._mousePos = Vector2.new(0, 0)
 
 		local size = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(592, 340)
 		local pos = options.Position or UDim2.new(0.5, -size.X / 2, 0.5, -size.Y / 2)
@@ -2726,6 +2771,27 @@ return (function()
 			end)
 		end
 
+		-- Tooltip label (reusable, hidden by default, high ZIndex to float above content)
+		self._tooltipLabel = U.Create("TextLabel", {
+			Name = "Tooltip",
+			Size = UDim2.fromOffset(0, 0),
+			BackgroundColor3 = theme.Element,
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ZIndex = 50000,
+			Visible = false,
+			Text = "",
+			Font = theme.Font,
+			TextSize = theme.FontSize,
+			TextColor3 = theme.TextPrimary,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			RichText = true,
+			Parent = self.Frame,
+		})
+		U.Create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = self._tooltipLabel })
+		U.Create("UIStroke", { Color = theme.Outline, Thickness = 1, Transparency = 0.25, Parent = self._tooltipLabel })
+
 		self:_dragging()
 
 		self.Gui.Parent = options.Parent or game:GetService("CoreGui")
@@ -2812,6 +2878,17 @@ return (function()
 				end
 			end)
 		end
+
+		-- Mouse tracking for tooltips
+		local uis = game:GetService("UserInputService")
+		self._mouseCon = uis.InputChanged:Connect(function(input, gpe)
+			if input.UserInputType == Enum.UserInputType.MouseMovement then
+				self._mousePos = input.Position
+				if self._tooltipActive and self._tooltipLabel and self._tooltipLabel.Visible then
+					self:_updateTooltipPosition()
+				end
+			end
+		end)
 
 		return self
 	end
@@ -3523,6 +3600,18 @@ return (function()
 		end
 		if self._activeDropdown then self._activeDropdown = nil end
 
+		-- Tooltip cleanup
+		self._tooltipPending = false
+		self._tooltipTarget = nil
+		self._tooltipActive = false
+		if self._tooltipTween then self._tooltipTween:Cancel(); self._tooltipTween = nil end
+		if self._mouseCon then self._mouseCon:Disconnect(); self._mouseCon = nil end
+		for _, data in pairs(self._tooltips) do
+			if data.unbind then data.unbind() end
+		end
+		self._tooltips = {}
+		if self._tooltipLabel then self._tooltipLabel:Destroy(); self._tooltipLabel = nil end
+
 		-- Destroy tabs
 		for _, tab in ipairs(self.Tabs) do
 			tab:Destroy()
@@ -3626,6 +3715,16 @@ return (function()
 			tab:ApplyTheme(theme)
 		end
 
+		-- Tooltip
+		if self._tooltipLabel then
+			self._tooltipLabel.BackgroundColor3 = theme.Element
+			self._tooltipLabel.Font = theme.Font
+			self._tooltipLabel.TextSize = theme.FontSize
+			self._tooltipLabel.TextColor3 = theme.TextPrimary
+			local stroke = self._tooltipLabel:FindFirstChildOfClass("UIStroke")
+			if stroke then stroke.Color = theme.Outline end
+		end
+
 		-- Command Palette (if currently open)
 		if self._paletteFrame then
 			self._paletteFrame.BackgroundColor3 = theme.Background
@@ -3690,6 +3789,137 @@ return (function()
 
 	function Menu:GetScale()
 		return self.Scale
+	end
+
+	--[[ Tooltip System ]]
+
+	--- Bind a tooltip to any Instance.
+	--- @param instance Instance — the GUI element that triggers the tooltip
+	--- @param text string — tooltip text (supports RichText)
+	--- @return function unbind — call to remove this tooltip binding
+	function Menu:BindTooltip(instance, text)
+		if self._destroyed or not instance then return function() end end
+
+		-- If already bound to this instance, unbind first
+		if self._tooltips[instance] then
+			self._tooltips[instance].unbind()
+		end
+
+		local conns = {}
+		local boundInstance = instance
+
+		local function disconnectAll()
+			for _, c in ipairs(conns) do
+				c:Disconnect()
+			end
+			conns = {}
+			if self._tooltips then self._tooltips[boundInstance] = nil end
+			if self._tooltipTarget == boundInstance then
+				self._tooltipPending = false
+				self._tooltipTarget = nil
+				self:_hideTooltip()
+			end
+		end
+
+		-- MouseEnter: start delay timer
+		table.insert(conns, instance.MouseEnter:Connect(function()
+			if self._destroyed then return end
+			self._tooltipPending = true
+			self._tooltipTarget = instance
+			task.delay(0.4, function()
+				if not self._tooltipPending or self._tooltipTarget ~= instance or self._destroyed then return end
+				if not instance or not instance.Parent then
+					self._tooltipPending = false
+					self._tooltipTarget = nil
+					return
+				end
+				self:_showTooltip(text)
+			end)
+		end))
+
+		-- MouseLeave: hide immediately
+		table.insert(conns, instance.MouseLeave:Connect(function()
+			self._tooltipPending = false
+			self._tooltipTarget = nil
+			self:_hideTooltip()
+		end))
+
+		-- Click (any mouse button on the instance): hide
+		table.insert(conns, instance.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1
+				or input.UserInputType == Enum.UserInputType.MouseButton2
+				or input.UserInputType == Enum.UserInputType.MouseButton3 then
+				self._tooltipPending = false
+				self._tooltipTarget = nil
+				self:_hideTooltip()
+			end
+		end))
+
+		self._tooltips[instance] = { unbind = disconnectAll, text = text }
+		return disconnectAll
+	end
+
+	function Menu:_showTooltip(text)
+		if self._destroyed or not self._tooltipLabel then return end
+		local label = self._tooltipLabel
+
+		-- Set text and compute size
+		label.Text = text
+		label.Size = UDim2.fromOffset(2000, 26)
+		local tb = label.TextBounds
+		local tw = math.min(math.max(tb.X + 16, 24), 300)
+		local th = math.max(tb.Y + 8, 26)
+		label.Size = UDim2.fromOffset(tw, th)
+
+		-- Position near cursor, clamped to frame
+		local frameAbsPos = self.Frame.AbsolutePosition
+		local frameSize = self.Frame.AbsoluteSize
+		local relX = math.clamp(self._mousePos.X - frameAbsPos.X + 12, 0, math.max(0, frameSize.X - tw))
+		local relY = math.clamp(self._mousePos.Y - frameAbsPos.Y + 20, 0, math.max(0, frameSize.Y - th))
+		label.Position = UDim2.fromOffset(relX, relY)
+
+		-- Fade in
+		label.Visible = true
+		label.BackgroundTransparency = 1
+		label.TextTransparency = 1
+		local ts = game:GetService("TweenService")
+		if self._tooltipTween then self._tooltipTween:Cancel() end
+		self._tooltipTween = ts:Create(label, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 0.08,
+			TextTransparency = 0,
+		})
+		self._tooltipTween:Play()
+		self._tooltipActive = true
+	end
+
+	function Menu:_hideTooltip()
+		if not self._tooltipLabel or not self._tooltipActive then return end
+		self._tooltipActive = false
+		if self._tooltipTween then self._tooltipTween:Cancel(); self._tooltipTween = nil end
+
+		local label = self._tooltipLabel
+		local ts = game:GetService("TweenService")
+		local tw = ts:Create(label, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			BackgroundTransparency = 1,
+			TextTransparency = 1,
+		})
+		tw.Completed:Connect(function()
+			label.Visible = false
+		end)
+		tw:Play()
+	end
+
+	function Menu:_updateTooltipPosition()
+		if not self._tooltipLabel or not self._tooltipLabel.Visible then return end
+		local label = self._tooltipLabel
+		local size = label.Size
+		local tw = size.X.Offset
+		local th = size.Y.Offset
+		local frameAbsPos = self.Frame.AbsolutePosition
+		local frameSize = self.Frame.AbsoluteSize
+		local relX = math.clamp(self._mousePos.X - frameAbsPos.X + 12, 0, math.max(0, frameSize.X - tw))
+		local relY = math.clamp(self._mousePos.Y - frameAbsPos.Y + 20, 0, math.max(0, frameSize.Y - th))
+		label.Position = UDim2.fromOffset(relX, relY)
 	end
 
 	--[[ Command Palette ]]
@@ -4117,7 +4347,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.10.1", Theme = Theme }
+	local FyyUI = { Version = "0.10.2", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
