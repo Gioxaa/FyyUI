@@ -1,5 +1,5 @@
 --[[
-	FyyUI v0.10.5
+	FyyUI v0.10.6
 	Roblox UI Library
 	@github FyyWannaFly/FyyUI
 	
@@ -997,11 +997,6 @@ return (function()
 		self._capturing = false
 		self._active = false
 
-		-- Parse Default
-		if options.Default ~= nil then
-			self:SetValue(options.Default)
-		end
-
 		self.HasDesc = self.Description ~= nil and self.Description ~= ""
 		local h = self.HasDesc and theme.DescHeight or theme.ElementHeight
 		local btnW = 100
@@ -1059,6 +1054,11 @@ return (function()
 			TextXAlignment = Enum.TextXAlignment.Center,
 			Parent = self.CaptureBtn,
 		})
+
+		-- Parse Default after KeyLabel exists so SetValue can update the UI safely.
+		if options.Default ~= nil then
+			self:SetValue(options.Default)
+		end
 
 		-- Description
 		if self.HasDesc then
@@ -3250,7 +3250,7 @@ return (function()
 	function Menu:ExportConfig()
 		local snapshot = {
 			Schema = "FyyUI.Config.v1",
-			Version = "0.10.5",
+			Version = "0.10.6",
 			Values = {},
 		}
 		for flag, ctrl in pairs(self._flagRegistry) do
@@ -3417,8 +3417,10 @@ return (function()
 			Position = iconPos,
 		}):Play()
 
+		self._minimizeToken = (self._minimizeToken or 0) + 1
+		local minimizeToken = self._minimizeToken
 		task.delay(0.25, function()
-			if self._destroyed or not self.Minimized or not self.Visible then return end
+			if self._destroyed or self._minimizeToken ~= minimizeToken or not self.Minimized or not self.Visible then return end
 			if self._minGui then
 				self._minGui.Enabled = true
 				self._minGui.Parent = game:GetService("CoreGui")
@@ -3433,6 +3435,7 @@ return (function()
 
 	function Menu:_restore()
 		if self._destroyed then return end
+		self._minimizeToken = (self._minimizeToken or 0) + 1
 		self.Minimized = false
 
 		local ts = game:GetService("TweenService")
@@ -3713,6 +3716,7 @@ return (function()
 	function Menu:Destroy()
 		if self._destroyed then return end
 		self._destroyed = true
+		self._minimizeToken = (self._minimizeToken or 0) + 1
 		self:CloseCommandPalette()
 
 		-- Disconnect all service-level connections
@@ -4493,7 +4497,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.10.5", Theme = Theme }
+	local FyyUI = { Version = "0.10.6", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
