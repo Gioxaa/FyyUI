@@ -1,9 +1,10 @@
 --[[
-	FyyUI v0.11.0
+	FyyUI v0.12.0
 	Roblox UI Library
 	@github FyyWannaFly/FyyUI
 	
-	local FyyUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FyyWannaFly/FyyUI/main/fyyui.lua"))()
+	-- Load this trusted local copy using your project's normal module loader.
+	local FyyUI = require(script.Parent.FyyUI)
 	local menu = FyyUI.Menu({ Title = "Hub" })
 	local tab = menu:Tab({ Text = "Main" })
 	tab:Toggle({ Text = "Auto Farm", Callback = function(v) end })
@@ -143,14 +144,134 @@ return (function()
 		return inst
 	end
 
-	--[[ Icon Module (Lucide/Solar/etc.) — optional remote loader ]]
-	-- Icons are local by default. Loading and executing source downloaded from a
-	-- URL is intentionally opt-in through FyyUI.LoadRemoteIconModule below.
+	local LIBRARY_VERSION = "0.12.0"
+	local CONFIG_V2_SCHEMA = "FyyUI.Config.v2"
+	local MAX_CONFIG_JSON_BYTES = 64 * 1024
+	local MAX_CONFIG_VALUES = 512
+	local MAX_CONFIG_ARRAY_ITEMS = 256
+	local MAX_CONFIG_STRING_BYTES = 16 * 1024
+	local MAX_CONFIG_NODES = 8192
+
+	--[[ Icon Module (Lucide/Solar/etc.) ]]
+	-- Icon providers are always supplied by the caller. FyyUI never downloads or
+	-- executes icon source.
 	local IconModule = nil
-	local DEFAULT_ICON_MODULE_URL = "https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/lucide/dist/Icons.lua"
 
 	local function isFiniteNumber(value)
 		return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+	end
+
+	local function consumeConfigBudget(budget, bytes)
+		budget.Nodes = budget.Nodes + 1
+		if budget.Nodes > MAX_CONFIG_NODES then return false, "config has too many values" end
+		budget.Bytes = budget.Bytes + bytes
+		if budget.Bytes > MAX_CONFIG_JSON_BYTES then return false, "config is too large" end
+		return true
+	end
+
+	local function copyJSONSafeValue(value, budget, seen, depth)
+		local valueType = type(value)
+		if valueType == "string" then
+			if #value > MAX_CONFIG_STRING_BYTES then return nil, "string value is too large" end
+			local withinBudget, budgetError = consumeConfigBudget(budget, #value + 2)
+			if not withinBudget then return nil, budgetError end
+			return value
+		end
+		if valueType == "boolean" then
+			local withinBudget, budgetError = consumeConfigBudget(budget, 5)
+			if not withinBudget then return nil, budgetError end
+			return value
+		end
+		if valueType == "number" then
+			if not isFiniteNumber(value) then return nil, "expected finite number" end
+			local withinBudget, budgetError = consumeConfigBudget(budget, 32)
+			if not withinBudget then return nil, budgetError end
+			return value
+		end
+		if valueType ~= "table" then return nil, "expected JSON-safe value" end
+		if depth >= 8 then return nil, "config value is nested too deeply" end
+		if seen[value] then return nil, "config value contains a cycle" end
+		local withinBudget, budgetError = consumeConfigBudget(budget, 2)
+		if not withinBudget then return nil, budgetError end
+
+		seen[value] = true
+		local count, maxIndex = 0, 0
+		for index in pairs(value) do
+			if type(index) ~= "number" or index < 1 or index % 1 ~= 0 then
+				seen[value] = nil
+				return nil, "expected dense array"
+			end
+			count = count + 1
+			if count > MAX_CONFIG_ARRAY_ITEMS then
+				seen[value] = nil
+				return nil, "config array is too large"
+			end
+			if index > maxIndex then maxIndex = index end
+		end
+		if count ~= maxIndex then
+			seen[value] = nil
+			return nil, "expected dense array"
+		end
+		local copied = {}
+		for index = 1, count do
+			local item, err = copyJSONSafeValue(value[index], budget, seen, depth + 1)
+			if err then
+				seen[value] = nil
+				return nil, err
+			end
+			copied[index] = item
+		end
+		seen[value] = nil
+		return copied
+	end
+
+	local function estimateJSONSafeValueBytes(value)
+		local valueType = type(value)
+		if valueType == "string" then return (#value * 6) + 2 end -- conservative escaping bound
+		if valueType == "boolean" then return 5 end
+		if valueType == "number" then return 32 end
+		local total = 2
+		for index = 1, #value do
+			total = total + estimateJSONSafeValueBytes(value[index]) + 1
+		end
+		return total
+	end
+
+	local function validateConfigV2Envelope(snapshot)
+		if type(snapshot) ~= "table" then return false, "Invalid config v2: expected a table" end
+		local allowed = { Schema = true, SchemaVersion = true, Version = true, Values = true }
+		for key in pairs(snapshot) do
+			if not allowed[key] then return false, "Invalid config v2: unexpected envelope field" end
+		end
+		if snapshot.Schema ~= CONFIG_V2_SCHEMA or snapshot.SchemaVersion ~= 2 then
+			return false, "Invalid config v2: unsupported schema"
+		end
+		if type(snapshot.Version) ~= "string" or snapshot.Version == "" or #snapshot.Version > 64 then
+			return false, "Invalid config v2: invalid Version"
+		end
+		if type(snapshot.Values) ~= "table" then return false, "Invalid config v2: missing Values table" end
+
+		local count = 0
+		local budget = { Nodes = 4, Bytes = 64 }
+		local normalized = {
+			Schema = CONFIG_V2_SCHEMA,
+			SchemaVersion = 2,
+			Version = snapshot.Version,
+			Values = {},
+		}
+		for flag, value in pairs(snapshot.Values) do
+			count = count + 1
+			if count > MAX_CONFIG_VALUES then return false, "Invalid config v2: too many values" end
+			if type(flag) ~= "string" or flag == "" or #flag > 128 then
+				return false, "Invalid config v2: invalid flag"
+			end
+			local withinBudget, budgetError = consumeConfigBudget(budget, #flag + 4)
+			if not withinBudget then return false, "Invalid config v2: " .. budgetError end
+			local copied, err = copyJSONSafeValue(value, budget, {}, 0)
+			if err then return false, "Invalid config v2: " .. err end
+			normalized.Values[flag] = copied
+		end
+		return true, normalized
 	end
 
 	local function destroyedResult(controller)
@@ -3702,18 +3823,48 @@ return (function()
 		end
 	end
 
-	function Menu:ExportConfig()
+	function Menu:ExportConfig(options)
 		if self._destroyed then return nil, "destroyed" end
-		local snapshot = {
+		if options ~= nil and type(options) ~= "table" then return nil, "Invalid config export options" end
+		local schemaVersion = options and options.SchemaVersion
+		if schemaVersion ~= nil and schemaVersion ~= 2 then return nil, "Unsupported config schema version" end
+		local isV2 = schemaVersion == 2
+		local snapshot = isV2 and {
+			Schema = CONFIG_V2_SCHEMA,
+			SchemaVersion = 2,
+			Version = LIBRARY_VERSION,
+			Values = {},
+		} or {
 			Schema = "FyyUI.Config.v1",
-			Version = "0.11.0",
+			Version = LIBRARY_VERSION,
 			Values = {},
 		}
+		local estimatedBytes = 64
 		for flag, ctrl in pairs(self._flagRegistry) do
+			local value
 			if ctrl.Numeric and ctrl.IsEmpty and ctrl:IsEmpty() then
-				snapshot.Values[flag] = ""
+				value = ""
 			else
-				snapshot.Values[flag] = ctrl:GetValue()
+				value = ctrl:GetValue()
+			end
+			if isV2 then
+				if type(flag) ~= "string" or flag == "" or #flag > 128 then
+					return nil, "Invalid config v2: invalid flag"
+				end
+				if value == nil then
+					-- nil is not representable in JSON objects; omit unbound keybinds.
+				elseif ctrl._capturing ~= nil and typeof(value) == "EnumItem" then
+					value = value.Name
+				end
+				if value ~= nil then
+					local copied, err = copyJSONSafeValue(value, { Nodes = 0, Bytes = 0 }, {}, 0)
+					if err then return nil, "Invalid config v2 for " .. flag .. ": " .. err end
+					estimatedBytes = estimatedBytes + (#flag * 6) + estimateJSONSafeValueBytes(copied) + 4
+					if estimatedBytes > MAX_CONFIG_JSON_BYTES then return nil, "Config JSON is too large" end
+					snapshot.Values[flag] = copied
+				end
+			else
+				snapshot.Values[flag] = value
 			end
 		end
 		return snapshot
@@ -3723,6 +3874,11 @@ return (function()
 		if self._destroyed then return false, "destroyed" end
 		if type(snapshot) ~= "table" then
 			return false, "Invalid config: expected a table"
+		end
+		if snapshot.SchemaVersion ~= nil or snapshot.Schema == CONFIG_V2_SCHEMA then
+			local validEnvelope, normalizedOrError = validateConfigV2Envelope(snapshot)
+			if not validEnvelope then return false, normalizedOrError end
+			snapshot = normalizedOrError
 		end
 		if type(snapshot.Values) ~= "table" then
 			return false, "Invalid config: missing Values table"
@@ -3842,6 +3998,39 @@ return (function()
 			return false, details
 		end
 		return true, details
+	end
+
+	function Menu:ExportConfigJSON()
+		if self._destroyed then return nil, "destroyed" end
+		local snapshot, exportError = self:ExportConfig({ SchemaVersion = 2 })
+		if not snapshot then return nil, exportError end
+		local serviceOk, httpService = pcall(function()
+			return game:GetService("HttpService")
+		end)
+		if not serviceOk or not httpService then return nil, "JSON support is unavailable" end
+		local encodedOk, encodedOrError = pcall(function()
+			return httpService:JSONEncode(snapshot)
+		end)
+		if not encodedOk or type(encodedOrError) ~= "string" then
+			return nil, "Failed to encode config JSON"
+		end
+		if #encodedOrError > MAX_CONFIG_JSON_BYTES then return nil, "Config JSON is too large" end
+		return encodedOrError
+	end
+
+	function Menu:ImportConfigJSON(json, options)
+		if self._destroyed then return false, "destroyed" end
+		if type(json) ~= "string" then return false, "Invalid config JSON: expected a string" end
+		if #json > MAX_CONFIG_JSON_BYTES then return false, "Invalid config JSON: input is too large" end
+		local serviceOk, httpService = pcall(function()
+			return game:GetService("HttpService")
+		end)
+		if not serviceOk or not httpService then return false, "JSON support is unavailable" end
+		local decodedOk, snapshotOrError = pcall(function()
+			return httpService:JSONDecode(json)
+		end)
+		if not decodedOk then return false, "Invalid config JSON" end
+		return self:ImportConfig(snapshotOrError, options)
 	end
 
 	function Menu:Notify(options)
@@ -5121,35 +5310,16 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.11.0", Theme = Theme }
+	local FyyUI = { Version = LIBRARY_VERSION, Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
 	end
 
-	-- Explicit compatibility escape hatch for callers who deliberately trust an
-	-- icon provider. This library never invokes it automatically.
-	function FyyUI.LoadRemoteIconModule(url)
-		url = url or DEFAULT_ICON_MODULE_URL
-		if type(url) ~= "string" or url == "" then return false, "expected a non-empty URL" end
-		if type(loadstring) ~= "function" then return false, "loadstring is unavailable" end
-		local raw
-		local fetchMethods = {
-			function() return game:HttpGet(url) end,
-			function() return game:GetService("HttpService"):GetAsync(url) end,
-		}
-		for _, fetch in ipairs(fetchMethods) do
-			local ok, result = pcall(fetch)
-			if ok and type(result) == "string" then raw = result; break end
-		end
-		if not raw then return false, "failed to download icon module" end
-		local compiled, compileErr = loadstring(raw)
-		if not compiled then return false, tostring(compileErr) end
-		local ran, moduleOrErr = pcall(compiled)
-		if not ran then return false, tostring(moduleOrErr) end
-		if type(moduleOrErr) ~= "table" then return false, "icon module must return a table" end
-		IconModule = moduleOrErr
-		return true, IconModule
+	-- Retained as a migration-safe compatibility stub. It intentionally performs
+	-- no network access and never executes downloaded source.
+	function FyyUI.LoadRemoteIconModule(_)
+		return false, "Remote icon modules are disabled; use FyyUI.SetIconModule() with a local module instead."
 	end
 	function FyyUI.GetIconModule()
 		return IconModule

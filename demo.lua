@@ -1,4 +1,5 @@
-local FyyUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/FyyWannaFly/FyyUI/main/fyyui.lua"))()
+-- Put fyyui.lua in a trusted local ModuleScript named "FyyUI" beside this demo.
+local FyyUI = require(script.Parent.FyyUI)
 
 local menu = FyyUI.Menu({
 	Title = "FyyCommunity",
@@ -126,5 +127,15 @@ infoTab:Label({ Text = "Collapsible Section" })
 infoTab:Divider()
 
 infoTab:Button({ Text = "Rejoin Game", Description = "Rejoin the current server", Icon = "refresh-cw", Callback = function() print("Rejoining...") end })
+
+-- Safe persistence roundtrip: JSON APIs use the local Roblox HttpService only
+-- for serialization. Persist `savedConfig` with your own trusted storage layer.
+local savedConfig, saveErr = menu:ExportConfigJSON()
+if savedConfig then
+	local restored, restoreDetails = menu:ImportConfigJSON(savedConfig, { NoCallbacks = true })
+	if not restored then warn("[FyyUI] Config restore failed:", restoreDetails) end
+else
+	warn("[FyyUI] Config export failed:", saveErr)
+end
 
 print("FyyUI v" .. FyyUI.Version .. " loaded successfully!")
