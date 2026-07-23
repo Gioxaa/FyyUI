@@ -1,5 +1,5 @@
 --[[
-	FyyUI v0.10.2
+	FyyUI v0.10.3
 	Roblox UI Library
 	@github FyyWannaFly/FyyUI
 	
@@ -572,11 +572,18 @@ return (function()
 		self.Description = options.Description
 		self.Options = options.Options or {}
 		self.Multi = options.Multi or false  -- Multi-Select mode
+		-- AllowNone: if false, single-select always retains a valid option when options exist
+		self.AllowNone = options.AllowNone
+		if self.AllowNone == nil then self.AllowNone = true end
 		self.Value = ""  -- start empty; use Default to pre-select
 		if options.Default ~= nil then
 			self.Value = options.Default
 		elseif self.Options[1] and not options.Placeholder then
 			self.Value = self.Options[1]  -- backward compat: auto-select first
+		end
+		-- AllowNone=false: ensure a valid selection when options exist
+		if not self.Multi and not self.AllowNone and #self.Options > 0 and (self.Value == nil or self.Value == "") then
+			self.Value = self.Options[1]
 		end
 		self.Placeholder = options.Placeholder or "Not selected"
 		self._selected = {}  -- set of selected values (multi mode)
@@ -748,9 +755,29 @@ return (function()
 		return self
 	end
 
+	function Dropdown:_updateDisplay()
+		-- Update display text from current state (used by SetOptions/Refresh)
+		if self.Multi then
+			if self._selectedCount == 0 then
+				self.SelectText.Text = self.Placeholder
+			elseif self._selectedCount <= 2 then
+				local parts = {}
+				for _, opt in ipairs(self.Options) do
+					if self._selected[opt] then table.insert(parts, opt) end
+				end
+				self.SelectText.Text = table.concat(parts, ", ")
+			else
+				self.SelectText.Text = self._selectedCount .. " selected"
+			end
+		else
+			self.SelectText.Text = (self.Value ~= "") and tostring(self.Value) or self.Placeholder
+		end
+	end
+
 	function Dropdown:SetValue(v)
 		if self.Multi then
 			-- Multi-select: toggle the value
+			if not self:_optIndex(self.Options, v) then return end
 			if self._selected[v] then
 				self._selected[v] = nil
 				self._selectedCount = math.max(0, self._selectedCount - 1)
@@ -777,7 +804,16 @@ return (function()
 		-- Single-select
 		if v == self.Value then
 			if self._arrow then self._arrow.Image = self._arrowDown end
-			if self._menu._activeDropdown == self then
+			if self._menu and self._menu._activeDropdown == self then
+				self._menu._activeDropdown = nil
+				self._menu:HideDropdownPopup()
+			end
+			return
+		end
+		-- AllowNone guard: prevent clearing selection when AllowNone=false and options exist
+		if not self.AllowNone and #self.Options > 0 and v == "" then
+			if self._arrow then self._arrow.Image = self._arrowDown end
+			if self._menu and self._menu._activeDropdown == self then
 				self._menu._activeDropdown = nil
 				self._menu:HideDropdownPopup()
 			end
@@ -792,7 +828,7 @@ return (function()
 		end
 		self.Open = false
 		if self._arrow then self._arrow.Image = self._arrowDown end
-		if self._menu._activeDropdown == self then
+		if self._menu and self._menu._activeDropdown == self then
 			self._menu._activeDropdown = nil
 			self._menu:HideDropdownPopup()
 		end
@@ -809,6 +845,107 @@ return (function()
 		end
 		return self.Value
 	end
+
+	function Dropdown:SetOptions(options, preferredValue, noCallback)
+		options = options or {}
+		local oldValue = self:GetValue()
+
+		-- Replace options list
+		self.Options = options
+
+		if self.Multi then
+			-- Multi: remove selections that no longer exist in new options
+			local optSet = {}
+			for _, opt in ipairs(options) do optSet[opt] = true end
+			for k in pairs(self._selected) do
+				if not optSet[k] then
+					self._selected[k] = nil
+					self._selectedCount = math.max(0, self._selectedCount - 1)
+				end
+			end
+		else
+			-- Single-select: determine new value
+			local newValue
+			if preferredValue ~= nil then
+				if self:_optIndex(options, preferredValue) then
+					newValue = preferredValue
+				elseif #options == 0 or self.AllowNone then
+					newValue = ""
+				else
+					newValue = options[1]
+				end
+			elseif self.Value ~= "" and self:_optIndex(options, self.Value) then
+				newValue = self.Value
+			elseif #options == 0 or self.AllowNone then
+				newValue = ""
+			else
+				newValue = options[1]
+			end
+
+			self.Value = newValue
+
+			-- Update stroke
+			if self._selectStroke then
+				self._selectStroke.Transparency = (self.Value ~= "" and self.Value ~= (options[1] or "")) and 0.5 or 0.8
+			end
+
+			-- Update _selIdx
+			self._selIdx = 0
+			for i, opt in ipairs(options) do
+				if opt == self.Value then self._selIdx = i; break end
+			end
+		end
+
+		-- Update display text
+		self:_updateDisplay()
+
+		-- Handle active popup: close and optionally re-open with new options
+		if self._menu and self._menu._activeDropdown == self and self._menu._activePopupFrame then
+			self._menu._activeDropdown = nil
+			self._menu:HideDropdownPopup()
+			if #options > 0 then
+				local pos = self.SelectBtn.AbsolutePosition
+				local siz = self.SelectBtn.AbsoluteSize
+				local selIdx = 0
+				for i, opt in ipairs(options) do
+					if opt == self.Value then selIdx = i; break end
+				end
+				self._menu:ShowDropdownPopup(pos, siz, options, selIdx, function(idx, val)
+					self:SetValue(val)
+				end, self.Multi, self)
+				self._menu._activeDropdown = self
+			end
+		end
+
+		-- Fire callback if selection changed (and noCallback is not set)
+		if not noCallback then
+			if self.Multi then
+				task.spawn(function() self.Callback(self._selected) end)
+			else
+				local newValue = self.Value
+				if newValue ~= oldValue then
+					task.spawn(function() self.Callback(newValue) end)
+				end
+			end
+		end
+	end
+
+	function Dropdown:_optIndex(list, value)
+		for i, v in ipairs(list) do
+			if v == value then return i end
+		end
+		return nil
+	end
+
+	function Dropdown:Refresh(options, preferredValue, noCallback)
+		if options ~= nil then
+			self:SetOptions(options, preferredValue, noCallback)
+		else
+			-- Refresh from current options, preserve current selection
+			self:SetOptions(self.Options, self.Value, noCallback)
+		end
+	end
+
 	function Dropdown:Destroy()
 		if self._menu._activeDropdown == self then
 			self._menu._activeDropdown = nil
@@ -3073,6 +3210,22 @@ return (function()
 			options[#options + 1] = btn
 		end
 
+		-- Empty-state label when no options
+		if #opts == 0 then
+			U.Create("TextLabel", {
+				Name = "EmptyState",
+				Size = UDim2.new(1, -8, 0, 28),
+				Text = "No options",
+				Font = theme.Font,
+				TextSize = theme.FontSize,
+				TextColor3 = theme.TextMuted,
+				TextTransparency = 0.4,
+				BackgroundTransparency = 1,
+				ZIndex = 10001,
+				Parent = content,
+			})
+		end
+
 		self._activePopupFrame = popup
 		-- Tween: slide in from right
 		local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -4347,7 +4500,7 @@ return (function()
 	end
 
 	--[[ Export ]]
-	local FyyUI = { Version = "0.10.2", Theme = Theme }
+	local FyyUI = { Version = "0.10.3", Theme = Theme }
 
 	function FyyUI.SetIconModule(mod)
 		IconModule = mod
